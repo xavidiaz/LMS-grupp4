@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+.idea/
+**/App_Data/
+*.db
+*.db-shm
+*.db-wal
