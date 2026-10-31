@@ -1,0 +1,74 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Search, filter, sort and paging – user story US15
+# Run top to bottom.
+# Only the user list supports SearchTerm today.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+# --- Search ---
+
+### 2. Search users by name (200, Maria)
+GET {{LMS.API_HostAddress}}/api/users?SearchTerm=Maria
+Authorization: Bearer {{teacherToken}}
+
+### 3. Search with no match (200, empty list)
+GET {{LMS.API_HostAddress}}/api/users?SearchTerm=NobodyHasThisName
+Authorization: Bearer {{teacherToken}}
+
+### 4. Search term longer than 100 characters (400)
+GET {{LMS.API_HostAddress}}/api/users?SearchTerm=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Authorization: Bearer {{teacherToken}}
+
+# --- Paging ---
+
+### 5. Users, page 1 with 2 rows (200)
+GET {{LMS.API_HostAddress}}/api/users?PageNumber=1&PageSize=2
+Authorization: Bearer {{teacherToken}}
+
+### 6. Users, page 2 with 2 rows (200)
+GET {{LMS.API_HostAddress}}/api/users?PageNumber=2&PageSize=2
+Authorization: Bearer {{teacherToken}}
+
+### 7. Modules with paging (200)
+GET {{LMS.API_HostAddress}}/api/Module?PageNumber=1&PageSize=2
+Authorization: Bearer {{teacherToken}}
+
+### 8. Activities with paging (200)
+GET {{LMS.API_HostAddress}}/api/Activity?PageNumber=1&PageSize=2
+Authorization: Bearer {{teacherToken}}
+
+### 9. Activity types with paging (200)
+GET {{LMS.API_HostAddress}}/api/ActionType?PageNumber=1&PageSize=2
+Authorization: Bearer {{teacherToken}}
+
+# --- Invalid paging ---
+
+### 10. Page number 0 (400)
+GET {{LMS.API_HostAddress}}/api/users?PageNumber=0
+Authorization: Bearer {{teacherToken}}
+
+### 11. Page size 0 (400)
+GET {{LMS.API_HostAddress}}/api/users?PageSize=0
+Authorization: Bearer {{teacherToken}}
+
+### 12. Page size above the limit (400)
+GET {{LMS.API_HostAddress}}/api/users?PageSize=101
+Authorization: Bearer {{teacherToken}}

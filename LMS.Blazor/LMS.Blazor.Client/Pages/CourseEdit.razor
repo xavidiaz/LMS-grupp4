@@ -1,0 +1,88 @@
+﻿@page "/course/edit/{id:int}"
+@using LMS.Blazor.Client.Components
+@using LMS.Blazor.Client.Models
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.CourseDtos
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Course</PageTitle>
+
+<div class="course-page">
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+    @if (isLoading)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <CourseForm Model="model" OnValidSubmit="HandleValidSubmit" IsSubmitting="isSubmitting" SubmitButtonText="Save" />
+    }
+</div>
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    private string errorMessage = string.Empty;
+    private CourseFormModel model = new();
+    private bool isSubmitting = false;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            CourseDto? course = await ApiProxyClient.GetAsync<CourseDto>($"courses/{id}");
+            if (course == null)
+            {
+                errorMessage = "Could not load the course";
+                return;
+            }
+            model.Name = course.Name;
+            model.Code = course.Code;
+            model.Description = course.Description;
+            model.StartDate = course.StartDate;
+            model.EndDate = course.EndDate;
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load the course: " + ex.Message;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        try
+        {
+            var dto = new PatchCourseDto(
+                id,
+                model.Name,
+                model.Code,
+                model.Description,
+                model.StartDate,
+                model.EndDate);
+
+            await ApiProxyClient.PatchAsync<PatchCourseDto, CourseDto>("courses", dto);
+            NavigationManager.NavigateTo("/courses");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not edit the course: " + ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

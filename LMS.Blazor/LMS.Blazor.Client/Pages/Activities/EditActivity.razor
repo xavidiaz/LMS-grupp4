@@ -1,0 +1,329 @@
+﻿
+@page "/activities/edit/{Id:int}"
+
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.ActionType
+@using LMS.Shared.DTOs.Activity
+@using LMS.Shared.Paging
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Activity</PageTitle>
+
+<div class="edit-activity-page">
+
+    <!-- PAGE HEADER -->
+    <header class="edit-activity-header">
+        <div class="edit-activity-header-text">
+            <h1>Edit Activity</h1>
+            <p>Update activity details, schedule and information.</p>
+        </div>
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="edit-activity-card">
+            <div class="edit-activity-state">
+                <div class="spinner-border edit-activity-spinner"
+                     role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+
+                <strong>Loading activity...</strong>
+                <p>Please wait while we load the activity details.</p>
+            </div>
+        </div>
+    }
+    else if (activity is null)
+    {
+        <div class="edit-activity-card">
+            <div class="edit-activity-error" role="alert">
+                <span class="bi bi-exclamation-circle"
+                      aria-hidden="true"></span>
+                <span>@(errorMessage ?? "Activity not found.")</span>
+            </div>
+
+            <div class="edit-activity-footer">
+                <button type="button"
+                        class="edit-activity-cancel-button"
+                        @onclick="GoBack">
+                    <span class="bi bi-arrow-left"
+                          aria-hidden="true"></span>
+                    Back
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="edit-activity-card">
+
+            <!-- CARD HEADER -->
+            <div class="edit-activity-card-header">
+                <div>
+                    <h2>Activity Information</h2>
+                    <p>Make changes to the activity information below.</p>
+                </div>
+
+                <span class="edit-activity-header-icon bi bi-pencil-square"
+                      aria-hidden="true"></span>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="edit-activity-error" role="alert">
+                    <span class="bi bi-exclamation-circle"
+                          aria-hidden="true"></span>
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <!-- EDIT FORM -->
+            <EditForm Model="activity"
+                      OnValidSubmit="Update">
+
+                <DataAnnotationsValidator />
+
+                <div class="edit-activity-form">
+
+                    <div class="edit-activity-validation">
+                        <ValidationSummary />
+                    </div>
+
+                    <!-- ACTIVITY TYPE -->
+                    <div class="edit-activity-field">
+                        <label for="activityType">
+                            Activity Type
+                        </label>
+
+                        <InputSelect id="activityType"
+                                     class="edit-activity-input"
+                                     @bind-Value="activity.ActionTypeId">
+                            @foreach (var actionType in actionTypes)
+                            {
+                                <option value="@actionType.Id">
+                                    @actionType.Name
+                                </option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <!-- TITLE -->
+                    <div class="edit-activity-field">
+                        <label for="activityTitle">
+                            Title
+                        </label>
+
+                        <InputText id="activityTitle"
+                                   class="edit-activity-input"
+                                   @bind-Value="activity.Title"
+                                   placeholder="Enter activity title" />
+
+                        <ValidationMessage For="@(() => activity.Title)" />
+                    </div>
+
+                    <!-- DESCRIPTION -->
+                    <div class="edit-activity-field">
+                        <label for="activityDescription">
+                            Description
+                        </label>
+
+                        <InputTextArea id="activityDescription"
+                                       class="edit-activity-input edit-activity-textarea"
+                                       @bind-Value="activity.Description"
+                                       rows="4"
+                                       placeholder="Enter activity description" />
+
+                        <ValidationMessage For="@(() => activity.Description)" />
+                    </div>
+
+                    <!-- DATE AND TIME -->
+                    <div class="edit-activity-date-grid">
+
+                        <div class="edit-activity-field">
+                            <label for="activityStart">
+                                Start Time
+                            </label>
+
+                            <InputDate id="activityStart"
+                                       class="edit-activity-input"
+                                       Type="InputDateType.DateTimeLocal"
+                                       @bind-Value="activity.StartDate" />
+
+                            <ValidationMessage For="@(() => activity.StartDate)" />
+                        </div>
+
+                        <div class="edit-activity-field">
+                            <label for="activityEnd">
+                                End Time
+                            </label>
+
+                            <InputDate id="activityEnd"
+                                       class="edit-activity-input"
+                                       Type="InputDateType.DateTimeLocal"
+                                       @bind-Value="activity.EndDate" />
+
+                            <ValidationMessage For="@(() => activity.EndDate)" />
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- FORM ACTIONS -->
+                <div class="edit-activity-footer">
+
+                    <a class="edit-activity-cancel-button"
+                       href="@($"/modules/{activity.ModuleId}/activities")">
+                        Cancel
+                    </a>
+
+                    <button type="submit"
+                            class="edit-activity-save-button"
+                            disabled="@isSaving">
+
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm"
+                                  role="status"
+                                  aria-hidden="true"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span class="bi bi-check-circle"
+                                  aria-hidden="true"></span>
+                            <span>Save Changes</span>
+                        }
+
+                    </button>
+
+                </div>
+
+            </EditForm>
+
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private UpdateActivityDto? activity;
+    private List<ActionTypeDto> actionTypes = new();
+    private string? actionTypeName;
+
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadActivity();
+    }
+
+    private async Task LoadActivity()
+    {
+        isLoading = true;
+        errorMessage = null;
+        activity = null;
+        actionTypeName = null;
+
+        try
+        {
+            var response = await ApiProxyClient
+                .GetAsync<PagedResponse<ActionTypeDto>>("ActionType");
+
+            actionTypes = response?.Items?.ToList()
+                ?? new List<ActionTypeDto>();
+
+            var existing =
+                await ApiProxyClient.GetAsync<ActivityDto>(
+                    $"Activity/{Id}");
+
+            if (existing is null)
+            {
+                errorMessage = "Activity not found.";
+                return;
+            }
+
+            actionTypeName = existing.ActionTypeName;
+
+            activity = new UpdateActivityDto
+            {
+                ModuleId = existing.ModuleId,
+                ActionTypeId = existing.ActionTypeId,
+                Title = existing.Title,
+                Description = existing.Description,
+                StartDate = existing.StartDate,
+                EndDate = existing.EndDate
+            };
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Update()
+    {
+        if (activity is null || isSaving)
+            return;
+
+        errorMessage = null;
+
+        if (activity.StartDate >= activity.EndDate)
+        {
+            errorMessage =
+                "The start time must be earlier than the end time.";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            await ApiProxyClient.PutAsync<UpdateActivityDto, ActivityDto>(
+                $"Activity/{Id}",
+                activity);
+
+            NavigationManager.NavigateTo(
+                $"/modules/{activity.ModuleId}/activities");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/courses");
+    }
+}

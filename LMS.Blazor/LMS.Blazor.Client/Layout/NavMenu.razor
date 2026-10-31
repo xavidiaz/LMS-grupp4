@@ -1,77 +1,287 @@
-﻿@implements IDisposable
+﻿
+@implements IDisposable
 
-@inject NavigationManager NavigationManager
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.NotificationDtos
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http
 
-<div class="top-row ps-3 navbar">
+@inject IApiProxyClient ApiProxyClient
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<!-- LEXICON BRANDING -->
+
+<div class="top-row navbar lexicon-top-row">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Lexicon LMS</a>
+
+        <a class="navbar-brand lexicon-brand"
+           href="">
+
+            <span class="lexicon-brand-symbol">
+                <span class="bi bi-mortarboard-fill"
+                      aria-hidden="true"></span>
+            </span>
+
+            <span class="lexicon-brand-text">
+                <span class="lexicon-brand-name">
+                    LEXICON
+                </span>
+
+                <span class="lexicon-brand-caption">
+                    Learning Management System
+                </span>
+            </span>
+
+        </a>
+
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox"
+       title="Navigation menu"
+       class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
+<div class="nav-scrollable"
+     onclick="document.querySelector('.navbar-toggler').click()">
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door" aria-hidden="true"></span>
-                Dashboard
-            </NavLink>
-        </div>
+    <nav class="nav flex-column lexicon-navigation">
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="course">
-                <span class="bi bi-book" aria-hidden="true"></span>
-                Min kurs
-            </NavLink>
-        </div>
+        <!-- STUDENT NAVIGATION -->
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="assignments">
-                <span class="bi bi-file-earmark-text" aria-hidden="true"></span>
-                Inlämningar
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="Student">
+            <Authorized>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="participants">
-                <span class="bi bi-people" aria-hidden="true"></span>
-                Kursdeltagare
-            </NavLink>
-        </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link"
+                             href="student-dashboard"
+                             Match="NavLinkMatch.All">
+                        <span class="bi bi-house-door"
+                              aria-hidden="true"></span>
+                        Dashboard
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link"
+                             href="course">
+                        <span class="bi bi-book"
+                              aria-hidden="true"></span>
+                        My Course
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link"
+                             href="assignments">
+                        <span class="bi bi-file-earmark-text"
+                              aria-hidden="true"></span>
+                        Assignments
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link"
+                             href="participants">
+                        <span class="bi bi-people"
+                              aria-hidden="true"></span>
+                        Participants
+                    </NavLink>
+                </div>
+
+            </Authorized>
+        </AuthorizeView>
+
+        <!-- TEACHER NAVIGATION -->
+
+        <AuthorizeView Roles="Teacher">
+            <Authorized>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link"
+                             href="teacher-dashboard"
+                             Match="NavLinkMatch.All">
+                        <span class="bi bi-house-door"
+                              aria-hidden="true"></span>
+                        Dashboard
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link"
+                             href="users">
+                        <span class="bi bi-people"
+                              aria-hidden="true"></span>
+                        User Management
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link"
+                             href="courses">
+                        <span class="bi bi-book"
+                              aria-hidden="true"></span>
+                        Course Management
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="teacher/submissions">
+                        <span class="bi bi-file-earmark-text"
+                              aria-hidden="true"></span>
+                        Student Submissions
+                    </NavLink>
+                </div>
+
+            </Authorized>
+        </AuthorizeView>
+
+        <!-- NOTIFICATIONS: AFTER ROLE-SPECIFIC MENU -->
 
         <AuthorizeView>
             <Authorized>
+
+                <div class="nav-item px-3">
+                    <button type="button"
+                            class="nav-link nav-notification-trigger"
+                            aria-expanded="@showNotifications"
+                            @onclick="ToggleNotificationsAsync">
+
+                        <span class="bi bi-bell"
+                              aria-hidden="true"></span>
+
+                        Notifications
+
+                        @if (UnreadCount > 0)
+                        {
+                            <span class="badge rounded-pill bg-danger ms-2">
+                                @UnreadCount
+                            </span>
+                        }
+
+                    </button>
+                </div>
+
+                @if (showNotifications)
+                {
+                    <div class="nav-notification-panel px-3 pb-2">
+
+                        @if (isLoadingNotifications)
+                        {
+                            <small>Loading notifications...</small>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(notificationError))
+                        {
+                            <small class="text-danger">
+                                @notificationError
+                            </small>
+                        }
+                        else if (notifications.Count == 0)
+                        {
+                            <small>No notifications.</small>
+                        }
+                        else
+                        {
+                            @foreach (var notification in notifications
+                                .OrderByDescending(n => n.CreatedAt))
+                            {
+                                <div class="card nav-notification-item mb-2">
+                                    <div class="card-body p-2">
+
+                                        <div>
+                                            @notification.Message
+                                        </div>
+
+                                        <small class="text-muted">
+                                            @(notification.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))
+                                        </small>
+
+                                        @if (!notification.IsRead)
+                                        {
+                                            <div class="mt-2">
+
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary"
+                                                        @onclick="() => MarkAsReadAsync(notification)">
+                                                    Mark as read
+                                                </button>
+
+                                            </div>
+                                        }
+
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                    </div>
+                }
+
+            </Authorized>
+        </AuthorizeView>
+
+        <!-- USER INFORMATION AND LOGOUT -->
+        <!-- User and logout -->
+        <AuthorizeView>
+            <Authorized>
+
                 <div class="nav-user-section">
+
                     <div class="nav-item px-3">
                         <span class="nav-user">
-                            <span class="bi bi-person-circle" aria-hidden="true"></span>
+
+                            <span class="bi bi-person-circle"
+                                  aria-hidden="true"></span>
+
                             @context.User.Identity?.Name
+
                         </span>
                     </div>
 
                     <div class="nav-item px-3">
-                        <form action="Account/Logout" method="post">
-                            <AntiforgeryToken />
-                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
 
-                            <button type="submit" class="nav-link logout-button">
-                                <span class="bi bi-box-arrow-left" aria-hidden="true"></span>
+                        <form action="Account/Logout"
+                              method="post">
+
+                            <AntiforgeryToken />
+
+                            <input type="hidden"
+                                   name="ReturnUrl"
+                                   value="/Account/Login" />
+
+                            <button type="submit"
+                                    class="nav-link logout-button">
+
+                                <span class="bi bi-box-arrow-left"
+                                      aria-hidden="true"></span>
+
                                 Logout
+
                             </button>
+
                         </form>
+
                     </div>
+
                 </div>
+
             </Authorized>
 
             <NotAuthorized>
+
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person" aria-hidden="true"></span>
+
+                    <NavLink class="nav-link"
+                             href="Account/Login">
+
+                        <span class="bi bi-person"
+                              aria-hidden="true"></span>
+
                         Login
+
                     </NavLink>
+
                 </div>
+
             </NotAuthorized>
         </AuthorizeView>
 
@@ -79,22 +289,100 @@
 </div>
 
 @code {
-    private string? currentUrl;
 
-    protected override void OnInitialized()
+    private List<NotificationDto> notifications = [];
+
+    private bool showNotifications;
+    private bool isLoadingNotifications;
+    private string? notificationError;
+
+    private readonly CancellationTokenSource componentCancellation = new();
+
+    private int UnreadCount =>
+        notifications.Count(notification => !notification.IsRead);
+
+    protected override async Task OnInitializedAsync()
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        NavigationManager.LocationChanged += OnLocationChanged;
+        var authenticationState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authenticationState.User.Identity?.IsAuthenticated == true)
+        {
+            await LoadNotificationsAsync();
+        }
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    private async Task ToggleNotificationsAsync()
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
-        StateHasChanged();
+        showNotifications = !showNotifications;
+
+        if (showNotifications)
+        {
+            await LoadNotificationsAsync();
+        }
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        isLoadingNotifications = true;
+        notificationError = null;
+
+        try
+        {
+            var result =
+                await ApiProxyClient.GetAsync<NotificationDto[]>(
+                    "notifications",
+                    componentCancellation.Token);
+
+            notifications = result?.ToList() ?? [];
+        }
+        catch (OperationCanceledException)
+            when (componentCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            notificationError = "Could not load notifications.";
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoadingNotifications = false;
+        }
+    }
+
+    private async Task MarkAsReadAsync(NotificationDto notification)
+    {
+        if (notification.IsRead)
+        {
+            return;
+        }
+
+        try
+        {
+            await ApiProxyClient.SendAsync<object?>(
+                HttpMethod.Patch,
+                $"notifications/{notification.Id}/read",
+                cancellationToken: componentCancellation.Token);
+
+            notification.IsRead = true;
+        }
+        catch (OperationCanceledException)
+            when (componentCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            notificationError =
+                "Could not mark the notification as read.";
+
+            Console.WriteLine(ex.Message);
+        }
     }
 
     public void Dispose()
     {
-        NavigationManager.LocationChanged -= OnLocationChanged;
+        componentCancellation.Cancel();
+        componentCancellation.Dispose();
     }
 }

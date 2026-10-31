@@ -1,0 +1,194 @@
+@LMS.API_HostAddress = http://localhost:5279
+@NotificationId = 1
+@CourseId = 1
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Submissions – user story US09
+# Run top to bottom.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Teacher finds the first module in Course A (id 1) (200)
+GET {{LMS.API_HostAddress}}/api/Module/course/1
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  client.global.set("moduleA", response.body.items[0].id);
+%}
+
+### 3. Teacher finds the assignment in that module (deadline in the future) (200)
+GET {{LMS.API_HostAddress}}/api/Activity/module/{{moduleA}}
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  const a = response.body.items.find(x => x.actionTypeName === "Assignment");
+  client.global.set("assignmentId", a.id);
+%}
+
+### 4. Teacher finds the first module in Course C (id 3, already ended) (200)
+GET {{LMS.API_HostAddress}}/api/Module/course/3
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  client.global.set("moduleC", response.body.items[0].id);
+%}
+
+### 5. Teacher finds the past assignment (200)
+GET {{LMS.API_HostAddress}}/api/Activity/module/{{moduleC}}
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  const a = response.body.items.find(x => x.actionTypeName === "Assignment");
+  client.global.set("pastAssignmentId", a.id);
+%}
+
+### 6. Teacher tries to submit (403)
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{teacherToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="answer.txt"
+Content-Type: text/plain
+
+Teachers cannot submit
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{assignmentId}}
+--LmsBoundary--
+
+### 7. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 8. Student submits on time (200, Status "Submitted")
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="answer.txt"
+Content-Type: text/plain
+
+My submission
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{assignmentId}}
+--LmsBoundary--
+
+### 9. Student sees own submissions (200, list with "answer.txt")
+GET {{LMS.API_HostAddress}}/api/submissions/activity/{{assignmentId}}/mine
+Authorization: Bearer {{studentToken}}
+
+### 9a. Student resubmits (200)
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="answer-v2.txt"
+Content-Type: text/plain
+
+My second submission
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{assignmentId}}
+--LmsBoundary--
+
+### 9b. Student sees both submissions (200, "answer-v2.txt" first)
+GET {{LMS.API_HostAddress}}/api/submissions/activity/{{assignmentId}}/mine
+Authorization: Bearer {{studentToken}}
+
+### 9c. Student with no submission on this assignment (200, empty list)
+GET {{LMS.API_HostAddress}}/api/submissions/activity/{{pastAssignmentId}}/mine
+Authorization: Bearer {{studentToken}}
+
+### 10. Student uploads a forbidden file type (400)
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="virus.exe"
+Content-Type: application/octet-stream
+
+not really an exe
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{assignmentId}}
+--LmsBoundary--
+
+### 11. Student submits to another course's assignment (404)
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="answer.txt"
+Content-Type: text/plain
+
+Wrong course
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{pastAssignmentId}}
+--LmsBoundary--
+
+### 12. Student in Course C logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Maria.Garcia@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentCToken", response.body.accessToken);
+%}
+
+### 13. Student C submits after deadline (200, Status "Late")
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentCToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="late.txt"
+Content-Type: text/plain
+
+Sorry, I'm late
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{pastAssignmentId}}
+--LmsBoundary--
+

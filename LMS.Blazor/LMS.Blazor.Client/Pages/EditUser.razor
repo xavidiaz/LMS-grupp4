@@ -1,0 +1,285 @@
+﻿@page "/users/edit/{Id}"
+
+@using LMS.Blazor.Client.Helper
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Shared.DTOs.UserDtos
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit User</PageTitle>
+
+<h3>Edit User</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage) && userNotLoaded)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Error:</strong> @errorMessage
+    </div>
+
+    <button type="button"
+            class="btn btn-secondary"
+            @onclick="Cancel">
+        Back to Users
+    </button>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>Error:</strong> @errorMessage
+        </div>
+    }
+
+    <EditForm Model="model" OnValidSubmit="UpdateUser">
+
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        @if (!string.IsNullOrWhiteSpace(successMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @successMessage
+            </div>
+        }
+
+        <div class="mb-3">
+            <label class="form-label">First Name</label>
+
+            <InputText class="form-control"
+                       @bind-Value="model.FirstName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Last Name</label>
+
+            <InputText class="form-control"
+                       @bind-Value="model.LastName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+
+            <InputText class="form-control"
+                       type="email"
+                       @bind-Value="model.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Role</label>
+
+            <InputSelect class="form-select"
+                         @bind-Value="model.Role">
+
+                <option value="">-- Select role --</option>
+                <option value="Student">Student</option>
+                <option value="Teacher">Teacher</option>
+
+            </InputSelect>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Course (Optional)</label>
+
+            <InputSelect class="form-select"
+                         @bind-Value="model.CourseId">
+
+                <option value="">-- Select course --</option>
+
+                @foreach (var course in courses)
+                {
+                    <option value="@course.Id">
+                        @course.Name
+                    </option>
+                }
+
+            </InputSelect>
+
+            <div class="form-text">
+                Select a course or leave the user without a course.
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit"
+                    class="btn btn-primary"
+                    disabled="@isSaving">
+
+                @if (isSaving)
+                {
+                    <span>
+                        <span class="spinner-border spinner-border-sm me-1"
+                              role="status"></span>
+                        Saving...
+                    </span>
+                }
+                else
+                {
+                    <span>Save Changes</span>
+                }
+
+            </button>
+
+            <button type="button"
+                    class="btn btn-secondary ms-2"
+                    @onclick="Cancel"
+                    disabled="@isSaving">
+                Cancel
+            </button>
+        </div>
+
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private UpdateUserDto model = new();
+
+    private List<CourseDto> courses = new();
+
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool userNotLoaded;
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadUser();
+    }
+
+    private async Task LoadUser()
+    {
+        isLoading = true;
+        userNotLoaded = false;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            await LoadCourses();
+
+            var user = await ApiProxyClient
+                .GetAsync<UserDto>($"users/{Id}");
+
+            if (user is null)
+            {
+                userNotLoaded = true;
+                errorMessage = "User not found.";
+                return;
+            }
+
+            model = new UpdateUserDto
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Role = user.Role,
+                CourseId = user.CourseId
+            };
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            userNotLoaded = true;
+
+            errorMessage = ex.Message;
+        }
+        
+        catch (Exception)
+        {
+            userNotLoaded = true;
+            errorMessage = "Unable to load the user. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadCourses()
+    {
+        var result = await ApiProxyClient
+            .GetAsync<List<CourseDto>>("Courses");
+
+        courses = result ?? new List<CourseDto>();
+    }
+
+    private async Task UpdateUser()
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var updatedUser = await ApiProxyClient
+                .PutAsync<UpdateUserDto, UserDto>(
+                    $"users/{Id}",
+                    model);
+
+            if (updatedUser is not null)
+            {
+                NavigationManager.NavigateTo("/users");
+            }
+            else
+            {
+                errorMessage = "The user could not be updated.";
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "An unexpected error occurred while updating the user.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+}

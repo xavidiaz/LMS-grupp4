@@ -1,0 +1,219 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Course documents – user story US06
+# Run top to bottom.
+# Uploads two documents and deletes them at the end.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 3. Student 2 (Course B) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student2@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("student2Token", response.body.accessToken);
+%}
+
+### 4. Student reads own course (200)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.global.set("courseA", response.body.id);
+%}
+
+### 5. Student 2 reads own course (200)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{student2Token}}
+
+> {%
+  client.global.set("courseB", response.body.id);
+%}
+
+### 6. Teacher finds a module in Course A (200)
+GET {{LMS.API_HostAddress}}/api/Module/course/{{courseA}}
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  client.global.set("moduleA", response.body.items[0].id);
+%}
+
+# --- Upload ---
+
+### 7. Teacher uploads a course document (200)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{teacherToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-course.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{courseA}}
+--LmsBoundary--
+
+> {%
+  client.global.set("documentId", response.body.id);
+%}
+
+### 8. Teacher uploads a module document (200)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{teacherToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-module.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="moduleId"
+
+{{moduleA}}
+--LmsBoundary--
+
+> {%
+  client.global.set("moduleDocumentId", response.body.id);
+%}
+
+### 9. Forbidden file type (400)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{teacherToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="virus.exe"
+Content-Type: application/octet-stream
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{courseA}}
+--LmsBoundary--
+
+### 10. No token (401)
+POST {{LMS.API_HostAddress}}/api/documents
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-course.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{courseA}}
+--LmsBoundary--
+
+# --- List ---
+
+### 11. Teacher lists course documents (200)
+GET {{LMS.API_HostAddress}}/api/documents/course/{{courseA}}
+Authorization: Bearer {{teacherToken}}
+
+### 12. Student lists own course documents (200)
+GET {{LMS.API_HostAddress}}/api/documents/course/{{courseA}}
+Authorization: Bearer {{studentToken}}
+
+### 13. Student lists another course's documents (403)
+GET {{LMS.API_HostAddress}}/api/documents/course/{{courseB}}
+Authorization: Bearer {{studentToken}}
+
+### 14. Teacher lists module documents (200)
+GET {{LMS.API_HostAddress}}/api/documents/module/{{moduleA}}
+Authorization: Bearer {{teacherToken}}
+
+### 15. Student lists own module documents (200)
+GET {{LMS.API_HostAddress}}/api/documents/module/{{moduleA}}
+Authorization: Bearer {{studentToken}}
+
+### 16. Student 2 lists another course's module documents (403)
+GET {{LMS.API_HostAddress}}/api/documents/module/{{moduleA}}
+Authorization: Bearer {{student2Token}}
+
+### 17. No token (401)
+GET {{LMS.API_HostAddress}}/api/documents/course/{{courseA}}
+
+# --- Download ---
+
+### 18. Teacher downloads the document (200)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{teacherToken}}
+
+### 19. Student in the course downloads it (200)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{studentToken}}
+
+### 20. Student in the course downloads the module document (200)
+GET {{LMS.API_HostAddress}}/api/documents/{{moduleDocumentId}}/download
+Authorization: Bearer {{studentToken}}
+
+### 21. Student in another course downloads it (403)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{student2Token}}
+
+### 22. Document does not exist (404)
+GET {{LMS.API_HostAddress}}/api/documents/999999/download
+Authorization: Bearer {{teacherToken}}
+
+### 23. No token (401)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+
+# --- Delete ---
+
+### 24. Student deletes the document (403)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{studentToken}}
+
+### 25. Teacher deletes the course document (204)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{teacherToken}}
+
+### 26. Teacher deletes the module document (204)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{moduleDocumentId}}
+Authorization: Bearer {{teacherToken}}
+
+### 27. Delete the same document again (404)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{teacherToken}}

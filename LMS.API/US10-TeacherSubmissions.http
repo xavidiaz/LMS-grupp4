@@ -1,0 +1,140 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Teacher's submission overview – user story US10
+# Run top to bottom.
+# Adds one submission from the student.
+########################################
+
+### 1. Teacher (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Teacher (Course B) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Anna.Larsson@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherBToken", response.body.accessToken);
+%}
+
+### 3. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 4. Student finds an assignment (200)
+GET {{LMS.API_HostAddress}}/api/Activity/my-assignments?PageNumber=1&PageSize=100
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.global.set("assignmentId", response.body.items[0].id);
+%}
+
+### 5. Student submits (200)
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-us10.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{assignmentId}}
+--LmsBoundary--
+
+> {%
+  client.global.set("submissionId", response.body.id);
+%}
+
+# --- List and filter ---
+
+### 6. Teacher lists submissions (200)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions?PageNumber=1&PageSize=20
+Authorization: Bearer {{teacherToken}}
+
+### 7. Filter by assignment (200)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions?activityId={{assignmentId}}
+Authorization: Bearer {{teacherToken}}
+
+### 8. Filter by status Submitted (200)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions?status=Submitted
+Authorization: Bearer {{teacherToken}}
+
+### 9. Filter by status Missing (200)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions?status=Missing
+Authorization: Bearer {{teacherToken}}
+
+### 10. Filter by status, any letter case (200)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions?status=late
+Authorization: Bearer {{teacherToken}}
+
+### 11. Status that does not exist (400)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions?status=Nope
+Authorization: Bearer {{teacherToken}}
+
+### 12. Page size above the limit (400)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions?PageSize=101
+Authorization: Bearer {{teacherToken}}
+
+### 13. Student lists submissions (403)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions
+Authorization: Bearer {{studentToken}}
+
+### 14. No token (401)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions
+
+### 15. DELETE is not allowed on the list (405)
+DELETE {{LMS.API_HostAddress}}/api/teacher/submissions
+Authorization: Bearer {{teacherToken}}
+
+# --- Download ---
+
+### 16. Teacher downloads the file (200)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions/{{submissionId}}/file
+Authorization: Bearer {{teacherToken}}
+
+### 17. Teacher in another course downloads it (403, returns 500 today)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions/{{submissionId}}/file
+Authorization: Bearer {{teacherBToken}}
+
+### 18. Submission does not exist (404)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions/999999/file
+Authorization: Bearer {{teacherToken}}
+
+### 19. Student downloads through the teacher endpoint (403)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions/{{submissionId}}/file
+Authorization: Bearer {{studentToken}}
+
+### 20. No token (401)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions/{{submissionId}}/file

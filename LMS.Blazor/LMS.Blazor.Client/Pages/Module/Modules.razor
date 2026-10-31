@@ -1,0 +1,213 @@
+﻿
+@page "/courses/{CourseId:int}/modules"
+
+@using LMS.Shared.DTOs.Module
+@using LMS.Shared.Paging
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher,Student")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Module Management</PageTitle>
+
+<div class="modules-page">
+
+    <!-- PAGE HEADER -->
+    <header class="modules-header">
+        <div class="modules-header-text">
+            <h1>Module Management</h1>
+            <p>Manage course modules, schedules and activities.</p>
+        </div>
+
+        @if (isTeacher)
+        {
+            <a class="modules-add-button"
+               href="@($"/modules/create/{CourseId}")">
+                <span class="bi bi-plus-circle"></span>
+                Add Module
+            </a>
+        }
+    </header>
+
+    <!-- MAIN CARD -->
+    <section class="modules-card">
+
+        <div class="modules-card-header">
+            <div>
+                <h2>All Modules</h2>
+                <p>
+                    @if (!isLoading && string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <span>@modules.Count modules available</span>
+                    }
+                    else
+                    {
+                        <span>Module overview</span>
+                    }
+                </p>
+            </div>
+
+            <span class="modules-header-icon bi bi-journal-text"
+                  aria-hidden="true"></span>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="modules-state">
+                <div class="spinner-border modules-spinner"
+                     role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <strong>Loading modules...</strong>
+                <p>Please wait while we load your modules.</p>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="modules-error" role="alert">
+                <span class="bi bi-exclamation-circle"
+                      aria-hidden="true"></span>
+                <span>@errorMessage</span>
+            </div>
+        }
+        else if (modules.Count == 0)
+        {
+            <div class="modules-state">
+                <span class="modules-empty-icon bi bi-journal-x"
+                      aria-hidden="true"></span>
+                <strong>No modules found</strong>
+                <p>No modules have been created for this course yet.</p>
+            </div>
+        }
+        else
+        {
+            <div class="modules-table-wrapper">
+                <table class="modules-table">
+                    <thead>
+                        <tr>
+                            <th>MODULE ID</th>
+                            <th>MODULE NAME</th>
+                            <th>START DATE</th>
+                            <th>END DATE</th>
+                            <th>SCHEDULE</th>
+
+                            @if (isTeacher)
+                            {
+                                <th class="modules-actions-heading">
+                                    ACTIONS
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var module in modules)
+                        {
+                            <tr @key="module.Id">
+                                <td>
+                                    <span class="modules-id-badge">
+                                        @module.Id
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="modules-name-cell">
+                                        <span class="modules-name-icon bi bi-journal-bookmark"
+                                              aria-hidden="true"></span>
+                                        <span class="modules-name">
+                                            @module.Name
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    @module.StartDate.ToString("yyyy-MM-dd")
+                                </td>
+
+                                <td>
+                                    @module.EndDate.ToString("yyyy-MM-dd")
+                                </td>
+
+                                <td>
+                                    <a class="modules-schedule-button"
+                                       href="@($"/modules/{module.Id}/activities")">
+                                        <span class="bi bi-calendar-event"
+                                              aria-hidden="true"></span>
+                                        Schedule
+                                    </a>
+                                </td>
+
+                                @if (isTeacher)
+                                {
+                                    <td class="modules-actions-cell">
+                                        <a class="modules-edit-button"
+                                           href="@($"/modules/edit/{module.Id}")">
+                                            <span class="bi bi-pencil"
+                                                  aria-hidden="true"></span>
+                                            Edit
+                                        </a>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private List<ModuleDto> modules = [];
+    private bool isLoading = true;
+    private bool isTeacher;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        isTeacher = authState.User.IsInRole("Teacher");
+
+        await LoadModules();
+    }
+
+    private async Task LoadModules()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response =
+                await ApiProxyClient.GetAsync<PagedResponse<ModuleDto>>(
+                    $"Module/course/{CourseId}");
+
+            modules = response?.Items
+                .OrderBy(m => m.StartDate)
+                .ThenBy(m => m.Id)
+                .ToList() ?? [];
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

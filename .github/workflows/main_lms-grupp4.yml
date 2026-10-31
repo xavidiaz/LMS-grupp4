@@ -1,8 +1,12 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
+# Builds the LMS and deploys it to Azure.
+#
+# WARNING: every deploy erases all data in the Azure database, then recreates it.
+# This is intentional because the project is a prototype with no real data.
+# Remove the "Reset database" step if the database ever holds real data.
 
-name: Build and deploy ASP.Net Core app to Azure Web App - lms2-api
+name: Build and deploy LMS to Azure
 
+# When the workflow runs: on every push to main, or by hand from the Actions tab.
 on:
   push:
     branches:
@@ -10,54 +14,127 @@ on:
   workflow_dispatch:
 
 jobs:
+  # First job: compiles the code and packages everything the deploy job needs.
+  # It doesn't connect to Azure, and it doesn't change anything there.
   build:
     runs-on: windows-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read # Lets the job download the repository code
 
     steps:
+      # Downloads the repository code onto GitHub's build machine.
       - uses: actions/checkout@v4
 
-      - name: Set up .NET Core
+      # Installs the .NET SDK the project needs.
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.x"
 
-      - name: Build with dotnet
+      # Compiles the whole solution, so the workflow stops here on a compile error.
+      - name: Build solution
         run: dotnet build --configuration Release
 
-      - name: dotnet publish
+      # Creates the runnable files for the API.
+      - name: Publish API
         run: dotnet publish LMS.API -c Release -o "${{env.DOTNET_ROOT}}/myapp"
 
-      - name: dotnet publish web
+      # Creates the runnable files for the Blazor site.
+      - name: Publish web
         run: dotnet publish LMS.Blazor/LMS.Blazor -c Release -o "${{env.DOTNET_ROOT}}/myweb"
 
-      - name: Upload artifact for deployment job
+      # Installs the EF Core tool, which is needed to create the migration bundle.
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 10.0.13
+
+      # Packs all EF Core migrations into one program, efbundle.exe.
+      # The deploy job runs it to create the tables in the Azure database.
+      # win-x64 matches the deploy job's machine, not the Linux app in Azure.
+      - name: Create migration bundle
+        run: dotnet ef migrations bundle --project LMS.Infrastructure --startup-project LMS.API --self-contained -r win-x64 --output "${{env.DOTNET_ROOT}}/migrations/efbundle.exe"
+
+      # The next three steps store the results, because the deploy job
+      # runs on a separate machine and can't see this machine's files.
+      - name: Upload migration bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-migrations
+          path: ${{env.DOTNET_ROOT}}/migrations
+
+      - name: Upload API
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
 
-      - name: Upload web artifact for deployment job
+      - name: Upload web
         uses: actions/upload-artifact@v4
         with:
           name: .net-web
           path: ${{env.DOTNET_ROOT}}/myweb
 
+  # Second job: resets the database and deploys both apps.
+  # It only starts if the build job succeeded, and only runs from main,
+  # so a manual run from another branch can't touch the Azure database.
   deploy:
     runs-on: windows-latest
     needs: build
+    if: ${{ github.ref == 'refs/heads/main' }}
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write # Lets the job log in to Azure without a stored password
+      contents: read
 
     steps:
-      - name: Download artifact from build job
+      # Gets efbundle.exe from the build job.
+      - name: Download migration bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-migrations
+          path: migrations
+
+      # Deletes all tables and data, including the migration history.
+      # Foreign keys are dropped first, because they would block dropping the tables.
+      # The connection string comes from the AZURE_SQL_CONNECTION_STRING secret.
+      - name: Reset database
+        shell: powershell
+        env:
+          AZURE_SQL_CONNECTION_STRING: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+        run: |
+          $sql = @"
+          DECLARE @sql nvarchar(max) = N'';
+          SELECT @sql += N'ALTER TABLE ' + QUOTENAME(s.name) + N'.' + QUOTENAME(t.name) + N' DROP CONSTRAINT ' + QUOTENAME(f.name) + N';'
+          FROM sys.foreign_keys f
+          JOIN sys.tables t ON f.parent_object_id = t.object_id
+          JOIN sys.schemas s ON t.schema_id = s.schema_id;
+          SELECT @sql += N'DROP TABLE ' + QUOTENAME(s.name) + N'.' + QUOTENAME(t.name) + N';'
+          FROM sys.tables t
+          JOIN sys.schemas s ON t.schema_id = s.schema_id;
+          EXEC sp_executesql @sql;
+          "@
+          $connection = New-Object System.Data.SqlClient.SqlConnection $env:AZURE_SQL_CONNECTION_STRING
+          $connection.Open()
+          $command = $connection.CreateCommand()
+          $command.CommandText = $sql
+          $command.ExecuteNonQuery() | Out-Null
+          $connection.Close()
+
+      # Creates all tables again from the migrations in the repo.
+      # If this fails, the workflow stops and neither app is deployed.
+      # The bundle starts Program, which needs ConnectionStrings__ApplicationDbContext.
+      - name: Apply database migrations
+        env:
+          AZURE_SQL_CONNECTION_STRING: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+          ConnectionStrings__ApplicationDbContext: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+        run: ./migrations/efbundle.exe --connection "$env:AZURE_SQL_CONNECTION_STRING"
+
+      # Gets the API files from the build job.
+      - name: Download API
         uses: actions/download-artifact@v4
         with:
           name: .net-app
           path: api
 
+      # Logs in to Azure, using the login details stored as GitHub secrets.
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -65,24 +142,23 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E81D81A214ED4A09A8124D3A42A05535 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E0C11F8454134318A98E8A9E8B251FD0 }}
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
+      # Deploys the API. It seeds the empty database when it starts.
+      - name: Deploy API
         uses: azure/webapps-deploy@v3
         with:
           app-name: "lms2-api"
-          slot-name: "Production"
           package: api
 
-      - name: Download web artifact from build job
+      # Gets the Blazor site files from the build job.
+      - name: Download web
         uses: actions/download-artifact@v4
         with:
           name: .net-web
           path: web
 
-      - name: Deploy web to Azure Web App
-        id: deploy-web-to-webapp
+      # Deploys the Blazor site.
+      - name: Deploy web
         uses: azure/webapps-deploy@v3
         with:
           app-name: "lms2-web"
-          slot-name: "Production"
           package: web

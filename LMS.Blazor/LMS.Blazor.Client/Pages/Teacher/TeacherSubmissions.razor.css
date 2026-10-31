@@ -1,0 +1,188 @@
+
+.teacher-submissions-page {
+    padding: 1.5rem;
+    color: #1f2937;
+}
+
+.submission-filters {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 170px;
+}
+
+    .filter-field label {
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .filter-field input,
+    .filter-field select {
+        min-height: 40px;
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+    }
+
+.submission-button,
+.file-download-button {
+    display: inline-block;
+    padding: 0.65rem 1rem;
+    border: 0;
+    border-radius: 6px;
+    background: #2563eb;
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+    .submission-button.secondary {
+        background: #e5e7eb;
+        color: #1f2937;
+    }
+
+    .submission-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.submission-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: white;
+}
+
+    .summary-card span,
+    .student-email,
+    .file-name {
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+
+.submission-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.submission-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+    .submission-table th,
+    .submission-table td {
+        padding: 0.9rem 1rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .submission-table th {
+        background: #f9fafb;
+        color: #6b7280;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+.student-email,
+.file-name {
+    margin-top: 0.3rem;
+    overflow-wrap: anywhere;
+}
+
+.submission-status {
+    display: inline-block;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-submitted {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.status-late {
+    color: #9a3412;
+    background: #ffedd5;
+}
+
+.status-missing {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.status-overdue {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.status-unknown {
+    color: #374151;
+    background: #e5e7eb;
+}
+
+.no-file {
+    color: #9ca3af;
+}
+
+.submission-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.submission-error {
+    margin-top: 1rem;
+    padding: 1rem;
+    color: #991b1b;
+    background: #fee2e2;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .submission-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .submission-filters {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .filter-field {
+        width: 100%;
+    }
+}

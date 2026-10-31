@@ -1,0 +1,197 @@
+﻿@page "/participants"
+@using LMS.Blazor.Client.Components
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.UserDtos
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@attribute [Authorize(Roles = "Student")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Participants</PageTitle>
+
+<div class="participants-page">
+
+    <PageHeader Title="Participants" Description="Here you can see the participants in your course." />
+
+    @* DYNAMIC COURSE PARTICIPANTS *@
+    @if (isLoading)
+    {
+        <section class="participant-group">
+            <p>Loading participants...</p>
+        </section>
+    }
+    else if (hasError)
+    {
+        <section class="participant-group">
+            <p role="alert">
+                Unable to load participants. Please try again later.
+            </p>
+        </section>
+    }
+    else if (participants.Count == 0)
+    {
+        <section class="participant-group">
+            <p>No course participants found.</p>
+        </section>
+    }
+    else
+    {
+        @foreach (var (title, role, avatarClass) in participantGroups)
+        {
+            var group = participants
+                .Where(p => p.Role == role)
+                .ToList();
+
+            if (group.Count == 0)
+            {
+                continue;
+            }
+
+            <section class="participant-group">
+
+                <div class="participant-group-heading">
+                    <h2>@title</h2>
+                    <span>@group.Count</span>
+                </div>
+
+                <ul class="participants-card">
+
+                    @foreach (var participant in group)
+                    {
+                        <li class="participant-row" @key="participant">
+
+                            <div class="participant-avatar @avatarClass">
+                                @GetInitials(participant)
+                            </div>
+
+                            <div class="participant-content">
+
+                                <div class="participant-name-row">
+
+                                    <h3>@GetDisplayName(participant)</h3>
+
+                                    @if (IsCurrentUser(participant))
+                                    {
+                                        <span class="current-user-badge">
+                                            You
+                                        </span>
+                                    }
+
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(participant.Email))
+                                {
+                                    <a href="@($"mailto:{participant.Email}")" class="participant-email">
+
+                                        <span class="mail-icon" aria-hidden="true">✉</span>
+
+                                        @participant.Email
+
+                                    </a>
+                                }
+
+                            </div>
+
+                        </li>
+                    }
+
+                </ul>
+
+            </section>
+        }
+    }
+
+</div>
+
+@code {
+
+    private List<CourseParticipantDto> participants = [];
+
+    private bool isLoading = true;
+    private bool hasError = false;
+
+    private string? currentUserEmail;
+
+    private static readonly (string Title, string Role, string AvatarClass)[] participantGroups =
+    [
+        ("Teachers", "Teacher", "teacher"),
+        ("Students", "Student", "student"),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider
+                .GetAuthenticationStateAsync();
+
+            currentUserEmail =
+                authState.User.FindFirst(ClaimTypes.Email)?.Value
+                ?? authState.User.Identity?.Name;
+
+            var result = await ApiProxyClient
+                .GetAsync<List<CourseParticipantDto>>(
+                    "courses/my-course/participants");
+
+            participants = result ?? [];
+        }
+        catch (Exception)
+        {
+            hasError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool IsCurrentUser(CourseParticipantDto participant)
+    {
+        return !string.IsNullOrWhiteSpace(currentUserEmail)
+            && string.Equals(
+                participant.Email,
+                currentUserEmail,
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetDisplayName(CourseParticipantDto participant)
+    {
+        var fullName =
+            $"{participant.FirstName?.Trim()} {participant.LastName?.Trim()}".Trim();
+
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            return fullName;
+        }
+
+        return !string.IsNullOrWhiteSpace(participant.Email)
+            ? participant.Email
+            : "Unnamed participant";
+    }
+
+    private static string GetInitials(CourseParticipantDto participant)
+    {
+        var first = string.IsNullOrWhiteSpace(participant.FirstName)
+            ? ""
+            : participant.FirstName.Trim()[..1];
+
+        var last = string.IsNullOrWhiteSpace(participant.LastName)
+            ? ""
+            : participant.LastName.Trim()[..1];
+
+        var initials = (first + last).ToUpperInvariant();
+
+        if (!string.IsNullOrEmpty(initials))
+        {
+            return initials;
+        }
+
+        return !string.IsNullOrWhiteSpace(participant.Email)
+            ? participant.Email.Trim()[..1].ToUpperInvariant()
+            : "?";
+    }
+}

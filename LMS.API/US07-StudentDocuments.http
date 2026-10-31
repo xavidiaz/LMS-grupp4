@@ -1,0 +1,192 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Documents shared by students – user story US07
+# Run top to bottom.
+# Uploads two documents and deletes them at the end.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 3. Student 2 (Course B) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student2@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("student2Token", response.body.accessToken);
+%}
+
+### 4. Student reads own course (200)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.global.set("courseA", response.body.id);
+%}
+
+### 5. Student 2 reads own course (200)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{student2Token}}
+
+> {%
+  client.global.set("courseB", response.body.id);
+%}
+
+### 6. Student finds a module in own course (200)
+GET {{LMS.API_HostAddress}}/api/Module/course/{{courseA}}
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.global.set("moduleA", response.body.items[0].id);
+%}
+
+# --- Student shares documents ---
+
+### 7. Student shares a document with own course (200)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-student.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{courseA}}
+--LmsBoundary--
+
+> {%
+  client.global.set("documentId", response.body.id);
+%}
+
+### 8. Student shares a document with own module (200)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-student-module.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="moduleId"
+
+{{moduleA}}
+--LmsBoundary--
+
+> {%
+  client.global.set("moduleDocumentId", response.body.id);
+%}
+
+### 9. Forbidden file type (400)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="virus.exe"
+Content-Type: application/octet-stream
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{courseA}}
+--LmsBoundary--
+
+### 10. Student shares with another course (403)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-student.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{courseB}}
+--LmsBoundary--
+
+### 11. Student 2 shares with another course's module (403)
+POST {{LMS.API_HostAddress}}/api/documents
+Authorization: Bearer {{student2Token}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-student.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="moduleId"
+
+{{moduleA}}
+--LmsBoundary--
+
+# --- Who can see them ---
+
+### 12. Student sees the course documents (200)
+GET {{LMS.API_HostAddress}}/api/documents/course/{{courseA}}
+Authorization: Bearer {{studentToken}}
+
+### 13. Teacher downloads the student's document (200)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{teacherToken}}
+
+### 14. Student in another course downloads it (403)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{student2Token}}
+
+# --- Delete ---
+
+### 15. Student deletes own document (403, teachers only)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{studentToken}}
+
+### 16. Teacher deletes the course document (204)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{teacherToken}}
+
+### 17. Teacher deletes the module document (204)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{moduleDocumentId}}
+Authorization: Bearer {{teacherToken}}

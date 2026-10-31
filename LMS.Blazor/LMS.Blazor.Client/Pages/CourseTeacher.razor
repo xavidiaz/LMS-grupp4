@@ -1,0 +1,62 @@
+﻿@page "/course/{id:int}"
+@using LMS.Blazor.Client.Components
+
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.CourseDtos
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+
+<PageTitle>Kurser</PageTitle>
+
+<div class="course-page">
+    @if (course is null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <section class="course-card">
+            <div class="course-header">
+                <h2>@course.Name (@course.Code)</h2>
+            </div>
+            <p>@course.Description ... <NavLink class="btn btn-sm btn-secondary ms-2" href="@($"courses/edit/{id}")">Edit
+            </NavLink>
+        </p>
+        <div class="course-dates">
+            <span>@course.StartDate.ToShortDateString()</span> - <span>@course.EndDate.ToShortDateString()</span>
+        </div>
+    </section>
+    <CourseDocuments Id="id" Type="course" />
+    <p>tabs...</p>
+    <div>
+        <h3>Kursframsteg</h3>
+        <p>x% genomfört i genomsnitt</p>
+        <p>progress bar...</p>
+        <p>Moduler</p>
+        <p>HTML & CSS ... progress bar x%</p>
+        <p>Javascript ... progress bar x%</p>
+        <p>React ... progress bar x%</p>
+    </div>
+    <div>
+        <p>Kursstatistik</p>
+        <div>Moduler</div>
+        <div>Aktiviteter</div>
+        <div>Studenter</div>
+        <div>Inlämningar</div>
+    </div>
+}
+</div>
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    private CourseDto? course;
+
+    protected override async Task OnInitializedAsync()
+    {
+        course = await ApiProxyClient.GetAsync<CourseDto>($"courses/{id}");
+    }
+}

@@ -1,3 +1,4 @@
+
 @page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
@@ -10,48 +11,262 @@
 
 <PageTitle>Log in</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
+<div class="login-page">
+    <div class="login-content">
+
+        <div class="login-header">
+            <span class="login-eyebrow">LEXICON LMS</span>
+            <h1>Welcome back</h1>
+            <p>Log in to continue to Lexicon LMS.</p>
+        </div>
+
+        <section class="login-card">
             <StatusMessage Message="@errorMessage" />
-            <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
+
+            <EditForm EditContext="editContext"
+                      method="post"
+                      OnSubmit="LoginUser"
+                      FormName="login">
+
                 <DataAnnotationsValidator />
-                <h2>Use your account to log in.</h2>
-                <hr />
-                <div class="form-floating mb-3">
+
+                <div class="login-form-group">
+                    <label for="Input.Email">Email</label>
+
                     <InputText @bind-Value="Input.Email"
                                id="Input.Email"
-                               class="form-control"
+                               class="login-input"
                                autocomplete="username"
                                aria-required="true"
                                placeholder="name@example.com" />
-                    <label for="Input.Email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+
+                    <ValidationMessage For="() => Input.Email"
+                                       class="text-danger" />
                 </div>
-                <div class="form-floating mb-3">
+
+                <div class="login-form-group">
+                    <label for="Input.Password">Password</label>
+
                     <InputText type="password"
                                @bind-Value="Input.Password"
                                id="Input.Password"
-                               class="form-control"
+                               class="login-input"
                                autocomplete="current-password"
                                aria-required="true"
-                               placeholder="password" />
-                    <label for="Input.Password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                               placeholder="Enter your password" />
+
+                    <ValidationMessage For="() => Input.Password"
+                                       class="text-danger" />
                 </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
+
+                <!-- NEW: ROLE SELECTION FOR DEMO -->
+                <div class="login-form-group">
+                    <label>Choose role (demo)</label>
+
+                    <InputRadioGroup @bind-Value="Input.SelectedRole"
+                                     class="login-role-options">
+
+                        <label class="login-role-choice">
+                            <InputRadio Value="@("Student")" />
+                            <span>Student</span>
+                        </label>
+
+                        <label class="login-role-choice">
+                            <InputRadio Value="@("Teacher")" />
+                            <span>Teacher</span>
+                        </label>
+
+                    </InputRadioGroup>
+                </div>
+
+                <div class="login-options">
+                    <label class="remember-label">
                         <InputCheckbox @bind-Value="Input.RememberMe"
-                                       class="darker-border-checkbox form-check-input" />
-                        Remember me
+                                       class="remember-checkbox" />
+                        <span>Remember me</span>
                     </label>
                 </div>
-                <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+
+                <button type="submit" class="login-button">
+                    Log in
+                </button>
             </EditForm>
         </section>
+
     </div>
 </div>
+
+<style>
+    .login-page {
+        min-height: calc(100vh - 40px);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 70px 24px;
+        background: #f8f9f6;
+    }
+
+    .login-content {
+        width: 100%;
+        max-width: 620px;
+    }
+
+    .login-header {
+        margin-bottom: 28px;
+    }
+
+    .login-eyebrow {
+        display: inline-block;
+        margin-bottom: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #355c47;
+    }
+
+    .login-header h1 {
+        margin: 0;
+        font-size: 2.6rem;
+        font-weight: 700;
+        color: #1f2521;
+    }
+
+    .login-header p {
+        margin-top: 10px;
+        margin-bottom: 0;
+        font-size: 1.05rem;
+        color: #687069;
+    }
+
+    .login-card {
+        padding: 32px;
+        background: #ffffff;
+        border: 1px solid #e2e6e1;
+        border-radius: 18px;
+        box-shadow: 0 8px 28px rgba(25, 45, 32, 0.06);
+    }
+
+    .login-form-group {
+        margin-bottom: 22px;
+    }
+
+    .login-form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #303832;
+    }
+
+    .login-input {
+        width: 100%;
+        min-height: 52px;
+        padding: 0 16px;
+        border: 1px solid #d8ded9;
+        border-radius: 10px;
+        background: #ffffff;
+        font-size: 1rem;
+        color: #1f2521;
+        outline: none;
+        transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .login-input:focus {
+        border-color: #355c47;
+        box-shadow: 0 0 0 3px rgba(53, 92, 71, 0.12);
+    }
+
+    .login-options {
+        display: flex;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .remember-label {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        cursor: pointer;
+        color: #4f5851;
+        font-size: 0.95rem;
+    }
+
+    .remember-checkbox {
+        width: 17px;
+        height: 17px;
+        accent-color: #355c47;
+    }
+
+    /* NEW: ROLE SELECTION STYLING */
+    .login-role-options {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-top: 8px;
+    }
+
+    .login-form-group .login-role-choice {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 0;
+        cursor: pointer;
+        color: #4f5851;
+        font-size: 0.95rem;
+        font-weight: 400;
+    }
+
+    .login-role-choice input {
+        width: 17px;
+        height: 17px;
+        accent-color: #355c47;
+    }
+
+    .login-button {
+        width: 100%;
+        min-height: 52px;
+        border: none;
+        border-radius: 10px;
+        background: #234a35;
+        color: #ffffff;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+            background-color 0.15s ease,
+            transform 0.15s ease;
+    }
+
+    .login-button:hover {
+        background: #193b2a;
+    }
+
+    .login-button:active {
+        transform: translateY(1px);
+    }
+
+    .text-danger {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.85rem;
+    }
+
+    @@media (max-width: 768px) {
+        .login-page {
+            padding: 40px 18px;
+        }
+
+        .login-card {
+            padding: 24px;
+        }
+
+        .login-header h1 {
+            font-size: 2.1rem;
+        }
+    }
+</style>
 
 @code {
     private string? errorMessage;
@@ -117,6 +332,9 @@
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
+
+        // NEW: Demo role selection
+        public string SelectedRole { get; set; } = "Student";
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }

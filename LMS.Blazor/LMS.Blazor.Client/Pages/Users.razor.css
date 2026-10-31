@@ -1,0 +1,429 @@
+﻿
+/* USER MANAGEMENT - MAGIC PATTERNS STYLE */
+
+.users-page {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 2.75rem 2rem 4rem;
+    color: #18231d;
+}
+
+/* PAGE HEADER */
+
+.users-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 2.25rem;
+}
+
+.users-header-text h1 {
+    margin: 0;
+    color: #17231c;
+    font-size: 2.5rem;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+}
+
+.users-header-text p {
+    margin: 0.65rem 0 0;
+    color: #657069;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* ADD USER BUTTON */
+
+.users-add-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+    padding: 0.85rem 1.3rem;
+    background: #173d2a;
+    border: 1px solid #173d2a;
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: 150ms ease;
+}
+
+    .users-add-button:hover {
+        background: #245337;
+        border-color: #245337;
+        color: #ffffff;
+        text-decoration: none;
+    }
+
+/* MAIN CARD */
+
+.users-card {
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #dce3de;
+    border-radius: 16px;
+    box-shadow: 0 3px 14px rgba(24, 54, 37, 0.04);
+}
+
+.users-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid #edf0ee;
+}
+
+    .users-card-header h2 {
+        margin: 0;
+        color: #243029;
+        font-size: 1.15rem;
+        font-weight: 650;
+    }
+
+    .users-card-header p {
+        margin: 0.4rem 0 0;
+        color: #7b847f;
+        font-size: 0.85rem;
+    }
+
+.users-header-icon {
+    color: #315a42;
+    font-size: 1.3rem;
+}
+
+/* USERS TABLE */
+
+.users-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+    .users-table thead {
+        background: #f8faf9;
+    }
+
+    .users-table th {
+        padding: 1rem;
+        border-bottom: 1px solid #dce3de;
+        color: #66726a;
+        font-size: 0.75rem;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+
+    .users-table td {
+        padding: 1.1rem 1rem;
+        border-bottom: 1px solid #edf0ee;
+        color: #33453a;
+        font-size: 0.87rem;
+        vertical-align: middle;
+    }
+
+    .users-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .users-table tbody tr:hover {
+        background: #f8faf9;
+    }
+
+/* USER INFORMATION */
+
+.users-first-name,
+.users-last-name {
+    color: #17231c;
+    font-weight: 600;
+}
+
+.users-email {
+    color: #657069 !important;
+}
+
+.users-course-badge {
+    display: inline-block;
+    padding: 0.35rem 0.65rem;
+    background: #edf4ef;
+    border-radius: 7px;
+    color: #245337;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.users-no-course {
+    color: #7b847f;
+    font-size: 0.83rem;
+}
+
+/* EDIT AND DELETE BUTTONS */
+
+.users-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.users-actions-heading {
+    text-align: center;
+}
+
+.users-edit-button,
+.users-delete-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 150ms ease;
+}
+
+.users-edit-button {
+    background: #edf4ef;
+    border: 1px solid #dce3de;
+    color: #245337;
+}
+
+    .users-edit-button:hover {
+        background: #dcece0;
+        color: #173d2a;
+        text-decoration: none;
+    }
+
+.users-delete-button {
+    background: #fcebea;
+    border: 1px solid #f5d5d2;
+    color: #b42318;
+}
+
+    .users-delete-button:hover {
+        background: #f8d9d6;
+        color: #912018;
+        text-decoration: none;
+    }
+
+/* PAGINATION */
+
+.users-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid #edf0ee;
+    background: #ffffff;
+}
+
+.users-pagination-button {
+    padding: 0.65rem 1rem;
+    background: #ffffff;
+    border: 1px solid #dce3de;
+    border-radius: 8px;
+    color: #245337;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 150ms ease;
+}
+
+    .users-pagination-button:hover:not(:disabled) {
+        background: #edf4ef;
+        border-color: #adc2b4;
+    }
+
+    .users-pagination-button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+.users-page-number {
+    color: #657069;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* LOADING AND EMPTY STATES */
+
+.users-empty-state {
+    min-height: 270px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.users-empty-icon {
+    color: #315a42;
+    font-size: 2rem;
+}
+
+.users-empty-state strong {
+    color: #26332b;
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+.users-empty-state p {
+    margin: 0;
+    color: #7b847f;
+    font-size: 0.9rem;
+}
+
+.users-empty-state .spinner-border {
+    color: #315a42;
+}
+
+.users-error-message {
+    margin: 1.5rem;
+    padding: 1rem;
+    background: #fcebea;
+    border: 1px solid #f5d5d2;
+    border-radius: 9px;
+    color: #b42318;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+    .users-page {
+        padding: 2rem 1.25rem 3rem;
+    }
+
+    .users-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 620px) {
+    .users-page {
+        padding: 1.5rem 1rem 2.5rem;
+    }
+
+    .users-header-text h1 {
+        font-size: 2rem;
+    }
+
+    .users-add-button {
+        width: 100%;
+    }
+
+    .users-card-header {
+        padding: 1.2rem;
+    }
+
+    .users-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .users-pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .users-page-number {
+        width: 100%;
+        text-align: center;
+        order: -1;
+    }
+}
+
+/* =========================================
+   USER MANAGEMENT - SEARCH BAR
+   MAGIC PATTERNS STYLE
+   ========================================= */
+
+.users-search {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 24px 26px;
+    background: #ffffff;
+    border-bottom: 1px solid #edf0ed;
+}
+
+    /* SEARCH INPUT */
+
+    .users-search input.form-control {
+        flex: 1;
+        width: 100%;
+        max-width: 480px;
+        min-height: 44px;
+        padding: 11px 16px;
+        border: 1px solid #dce3de;
+        border-radius: 9px;
+        background: #fafcfb;
+        color: #33453a;
+        font-size: 13px;
+        box-shadow: none;
+    }
+
+        .users-search input.form-control::placeholder {
+            color: #98a39b;
+        }
+
+        .users-search input.form-control:focus {
+            background: #ffffff;
+            border-color: #658b70;
+            box-shadow: 0 0 0 3px rgba(101, 139, 112, 0.12);
+            outline: none;
+        }
+
+    /* SEARCH BUTTON */
+
+    .users-search .users-add-button {
+        min-height: 44px;
+        padding: 11px 24px;
+        border-radius: 9px;
+        background: #233e32;
+        border-color: #233e32;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+        .users-search .users-add-button:hover {
+            background: #315645;
+            border-color: #315645;
+        }
+
+/* RESPONSIVE SEARCH */
+
+@media (max-width: 620px) {
+    .users-search {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 20px 18px;
+    }
+
+        .users-search input.form-control {
+            max-width: none;
+        }
+
+        .users-search .users-add-button {
+            width: 100%;
+        }
+}

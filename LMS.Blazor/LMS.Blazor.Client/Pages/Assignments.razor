@@ -1,0 +1,547 @@
+﻿@page "/assignments"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Student")]
+@using LMS.Blazor.Client.Components
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Helper
+@using LMS.Shared.DTOs.AssignmentDtos
+@using LMS.Shared.DTOs.SubmissionDtos
+@using LMS.Shared.Enum
+@using LMS.Shared.Paging
+@using LMS.Shared.Validation
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Net.Http.Headers
+
+@inject IApiProxyClient ApiProxyClient
+
+<PageTitle>Assignments</PageTitle>
+
+<div class="assignments-page">
+
+    <PageHeader Title="Assignments" Description="Here you can see your assignments and their status." />
+
+    @if (isLoading)
+    {
+        <ContentState Type="loading" />
+    }
+    else if (hasError)
+    {
+        <ContentState Type="error" Message="Could not load the assignments." />
+    }
+    else if (!hasAssignments)
+    {
+        <ContentState Type="empty" Message="There are no assignments to display." />
+    }
+    else
+    {
+        @foreach (var assignment in assignments)
+        {
+            <div class="assignment-card">
+
+                <div class="assignment-content">
+                    <span class="assignment-status @GetStatusClass(assignment)">
+                        @GetStatusText(assignment)
+                    </span>
+
+                    <h2>@assignment.Name</h2>
+
+                    <p class="assignment-deadline">
+                        Deadline: @assignment.Deadline.ToString("dd MMM yyyy")
+                    </p>
+                </div>
+
+                <button type="button" class="assignment-button secondary" @onclick="() => ViewDetails(assignment)">
+                    View details
+                </button>
+
+            </div>
+        }
+    }
+
+    @if (showDetailsModal && selectedAssignment is not null)
+    {
+        <div class="assignment-modal-backdrop" @onclick="CloseDetails">
+
+            <div class="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title"
+                 @onclick:stopPropagation="true">
+
+                <div class="assignment-modal-header">
+
+                    <div>
+                        <span class="assignment-status @GetStatusClass(selectedAssignment)">
+                            @GetStatusText(selectedAssignment)
+                        </span>
+
+                        <h2 id="assignment-modal-title">
+                            @selectedAssignment.Name
+                        </h2>
+                    </div>
+
+                    <button type="button" class="assignment-modal-close" disabled="@isUploading" @onclick="CloseDetails"
+                            aria-label="Close details">
+                        &times;
+                    </button>
+
+                </div>
+
+                <div class="assignment-modal-body">
+
+                    <section class="assignment-modal-section">
+                        <h3>Description</h3>
+
+                        @if (string.IsNullOrWhiteSpace(selectedAssignment.Description))
+                        {
+                            <p>No description available.</p>
+                        }
+                        else
+                        {
+                            <p>@selectedAssignment.Description</p>
+                        }
+                    </section>
+
+                    <div class="assignment-modal-info-grid">
+
+                        <div class="assignment-modal-info-item">
+                            <span>Deadline</span>
+                            <strong>
+                                @selectedAssignment.Deadline.ToString("dd MMM yyyy HH:mm")
+                            </strong>
+                        </div>
+
+                        <div class="assignment-modal-info-item">
+                            <span>Created</span>
+                            <strong>
+                                @(selectedAssignment.CreatedAt?.ToString("dd MMM yyyy")
+                                    ?? "Not available")
+                            </strong>
+                        </div>
+
+                        <div class="assignment-modal-info-item">
+                            <span>Grade</span>
+                            <strong>
+                                @(selectedAssignment.Grade?.ToString("0.##")
+                                    ?? "Not graded")
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    <section class="assignment-modal-section">
+                        <h3>Teacher feedback</h3>
+
+                        @if (selectedAssignment.HasFeedback)
+                        {
+                            @if (!string.IsNullOrWhiteSpace(selectedAssignment.Comment))
+                            {
+                                <div class="assignment-feedback">
+                                    @selectedAssignment.Comment
+                                </div>
+                            }
+                            else
+                            {
+                                <p>
+                                    Feedback is available, but no comment was provided.
+                                </p>
+                            }
+                        }
+                        else
+                        {
+                            <p>No feedback available yet.</p>
+                        }
+                    </section>
+
+                    <!-- US09: Submission form -->
+                    <section class="assignment-upload-section">
+
+                        <div class="assignment-upload-heading">
+                            <h3>Submit assignment</h3>
+
+                            <span class="assignment-status @GetStatusClass(selectedAssignment)">
+                                @GetStatusText(selectedAssignment)
+                            </span>
+                        </div>
+
+                        <p class="assignment-upload-description">
+                            Upload your completed assignment.
+                        </p>
+
+                        @if (isLoadingSubmission)
+                        {
+                            <p>Loading submission...</p>
+                        }
+                        else if (submissions.Count > 0)
+                        {
+                            <div class="assignment-submission-info">
+                                <strong>Your submissions</strong>
+
+                                @foreach (var submission in submissions)
+                                {
+                                    <p>
+                                        @submission.FileName
+                                        - @submission.SubmittedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                                        <span class="assignment-status @(submission.Status == "Late" ? "overdue" : "awaiting")">
+                                            @submission.Status
+                                        </span>
+                                    </p>
+                                }
+                            </div>
+                        }
+
+                        <div class="assignment-upload-area">
+
+                            <label class="assignment-file-label">
+
+                                <span class="bi bi-cloud-arrow-up assignment-upload-icon" aria-hidden="true"></span>
+
+                                <strong>
+                                    @(selectedFile?.Name ?? "Choose a file")
+                                </strong>
+
+                                <span>
+                                    PDF, DOCX, PPTX, XLSX, TXT, JPG, PNG
+                                </span>
+
+                                <span>
+                                    Maximum file size: 10 MB
+                                </span>
+
+                                <InputFile @key="fileInputKey" OnChange="OnFileSelected"
+                                           accept=".pdf,.docx,.pptx,.xlsx,.txt,.jpg,.jpeg,.png" disabled="@isUploading"
+                                           class="assignment-file-input" />
+
+                            </label>
+
+                        </div>
+
+                        <div class="assignment-validation-info">
+
+                            <strong>
+                                <span class="bi bi-info-circle" aria-hidden="true"></span>
+                                File validation
+                            </strong>
+
+                            <p>
+                                Invalid files are rejected before upload.
+                                The server validates all submissions again.
+                            </p>
+
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(uploadError))
+                        {
+                            <div class="assignment-upload-error" role="alert">
+                                @uploadError
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(uploadSuccess))
+                        {
+                            <div class="assignment-upload-success" role="status">
+                                @uploadSuccess
+                            </div>
+                        }
+
+                        <button type="button" class="assignment-submit-button"
+                                disabled="@(selectedFile is null || isUploading)" @onclick="SubmitAssignment">
+
+                            @if (isUploading)
+                            {
+                                <span>Uploading...</span>
+                            }
+                            else
+                            {
+                                <span class="bi bi-upload" aria-hidden="true"></span>
+
+                                <span>Submit assignment</span>
+                            }
+
+                        </button>
+
+                    </section>
+
+                </div>
+
+                <div class="assignment-modal-footer">
+
+                    <button type="button" class="assignment-button secondary" disabled="@isUploading"
+                            @onclick="CloseDetails">
+                        Close
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+
+    private bool isLoading = true;
+    private bool hasError;
+    private bool showDetailsModal;
+
+    private AssignmentDetailsDto? selectedAssignment;
+    private List<AssignmentDetailsDto> assignments = new();
+
+    private IBrowserFile? selectedFile;
+    private List<SubmissionDto> submissions = [];
+
+    private bool isUploading;
+    private bool isLoadingSubmission;
+
+    private string? uploadError;
+    private string? uploadSuccess;
+
+    private int fileInputKey;
+    private int modalVersion;
+
+    private bool hasAssignments => assignments.Count > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssignments();
+    }
+
+    private async Task LoadAssignments()
+    {
+        try
+        {
+            isLoading = true;
+            hasError = false;
+
+            var response =
+                await ApiProxyClient.GetAsync<PagedResponse<AssignmentDetailsDto>>(
+                    "Activity/my-assignments?PageNumber=1&PageSize=100");
+
+            assignments = response?.Items?.ToList() ?? [];
+        }
+        catch
+        {
+            hasError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetStatusText(AssignmentDetailsDto assignment)
+    {
+        return assignment.AssignmentStatus switch
+        {
+            AssignmentStatus.Unsubmitted => "To do",
+            AssignmentStatus.Submitted => "Submitted",
+            AssignmentStatus.Late => "Overdue",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetStatusClass(AssignmentDetailsDto assignment)
+    {
+        return assignment.AssignmentStatus switch
+        {
+            AssignmentStatus.Unsubmitted => "todo",
+            AssignmentStatus.Submitted => "awaiting",
+            AssignmentStatus.Late => "overdue",
+            _ => string.Empty
+        };
+    }
+
+    private async Task ViewDetails(AssignmentDetailsDto assignment)
+    {
+        selectedAssignment = assignment;
+        showDetailsModal = true;
+
+        selectedFile = null;
+        submissions = [];
+        uploadError = null;
+        uploadSuccess = null;
+
+        fileInputKey++;
+        var version = ++modalVersion;
+
+        isLoadingSubmission = true;
+
+        try
+        {
+            var result =
+                await ApiProxyClient.GetAsync<List<SubmissionDto>>(
+                    $"submissions/activity/{assignment.Id}/mine");
+
+            if (version == modalVersion)
+            {
+                submissions = result ?? [];
+            }
+        }
+        catch (ApiException ex)
+        {
+            if (version == modalVersion)
+            {
+                uploadError = ex.Message;
+            }
+        }
+        catch
+        {
+            if (version == modalVersion)
+            {
+                uploadError = "Could not load your submissions. The server could not be reached.";
+            }
+        }
+        finally
+        {
+            if (version == modalVersion)
+            {
+                isLoadingSubmission = false;
+            }
+        }
+    }
+
+    private void CloseDetails()
+    {
+        if (isUploading)
+            return;
+
+        modalVersion++;
+
+        showDetailsModal = false;
+        selectedAssignment = null;
+
+        selectedFile = null;
+        submissions = [];
+
+        uploadError = null;
+        uploadSuccess = null;
+
+        isLoadingSubmission = false;
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = null;
+        uploadError = null;
+        uploadSuccess = null;
+
+        var file = e.File;
+
+        var validationError =
+            FileRules.Validate(file.Name, file.Size);
+
+        if (validationError is not null)
+        {
+            uploadError = validationError;
+            return;
+        }
+
+        selectedFile = file;
+    }
+
+    private async Task SubmitAssignment()
+    {
+        if (selectedFile is null ||
+            selectedAssignment is null ||
+            isUploading)
+        {
+            return;
+        }
+
+        uploadError = null;
+        uploadSuccess = null;
+
+        var validationError =
+            FileRules.Validate(selectedFile.Name, selectedFile.Size);
+
+        if (validationError is not null)
+        {
+            uploadError = validationError;
+            return;
+        }
+
+        isUploading = true;
+
+        try
+        {
+            using var form = new MultipartFormDataContent();
+
+            using var stream =
+                selectedFile.OpenReadStream(FileRules.MaxFileSize);
+
+            using var fileContent = new StreamContent(stream);
+
+            fileContent.Headers.ContentType =
+                new MediaTypeHeaderValue(
+                    string.IsNullOrWhiteSpace(selectedFile.ContentType)
+                        ? "application/octet-stream"
+                        : selectedFile.ContentType);
+
+            form.Add(
+                fileContent,
+                "file",
+                selectedFile.Name);
+
+            form.Add(
+                new StringContent(selectedAssignment.Id.ToString()),
+                "activityId");
+
+            var result =
+                await ApiProxyClient.SendAsync<SubmissionDto>(
+                    HttpMethod.Post,
+                    "submissions",
+                    form);
+
+            if (result is null)
+            {
+                uploadError =
+                    "The server did not confirm the submission.";
+                return;
+            }
+
+            submissions.Insert(0, result);
+
+            selectedFile = null;
+            fileInputKey++;
+
+            uploadSuccess =
+                "Assignment submitted successfully.";
+
+            await RefreshAssignmentsAfterUpload();
+        }
+        catch (ApiException ex)
+        {
+            uploadError = ex.Message;
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private async Task RefreshAssignmentsAfterUpload()
+    {
+        try
+        {
+            var response =
+                await ApiProxyClient.GetAsync<PagedResponse<AssignmentDetailsDto>>(
+                    "Activity/my-assignments?PageNumber=1&PageSize=100");
+
+            if (response is null)
+                return;
+
+            assignments = response.Items?.ToList() ?? [];
+
+            if (selectedAssignment is not null)
+            {
+                selectedAssignment =
+                    assignments.FirstOrDefault(
+                        a => a.Id == selectedAssignment.Id)
+                    ?? selectedAssignment;
+            }
+        }
+        catch
+        {
+            // Keep the successful submission visible
+            // even if refreshing the list fails.
+        }
+    }
+}

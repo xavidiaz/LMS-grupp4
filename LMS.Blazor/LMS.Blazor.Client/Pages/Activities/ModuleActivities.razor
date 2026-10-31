@@ -1,0 +1,478 @@
+﻿
+@page "/modules/{ModuleId:int}/activities"
+
+@using LMS.Shared.DTOs.Activity
+@using LMS.Shared.DTOs.Module
+@using LMS.Shared.Paging
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher,Student")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Module Activities</PageTitle>
+
+<div class="activities-page">
+
+    <!-- PAGE HEADER -->
+    <header class="activities-header">
+        <div class="activities-header-text">
+            <h1>Module Activities</h1>
+            <p>Manage module activities and schedules.</p>
+        </div>
+
+        @if (isTeacher)
+        {
+            <a class="activities-add-button"
+               href="@($"/activities/create/{ModuleId}")">
+                <span class="bi bi-plus-circle"
+                      aria-hidden="true"></span>
+                Add Activity
+            </a>
+        }
+    </header>
+
+    <!-- MAIN CARD -->
+    <section class="activities-card">
+
+        <div class="activities-card-header">
+            <div>
+                <h2>All Activities</h2>
+
+                <p>
+                    @if (!isLoading &&
+                         string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <span>
+                            @(pagedResponse?.TotalCount ?? activities.Count)
+                            activities available
+                        </span>
+                    }
+                    else
+                    {
+                        <span>Activities ordered by start time</span>
+                    }
+                </p>
+            </div>
+
+            <span class="activities-header-icon bi bi-calendar-week"
+                  aria-hidden="true"></span>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="activities-error" role="alert">
+                <span class="bi bi-exclamation-circle"
+                      aria-hidden="true"></span>
+                <span>@errorMessage</span>
+            </div>
+        }
+
+        @if (isLoading)
+        {
+            <div class="activities-state">
+                <div class="spinner-border activities-spinner"
+                     role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+
+                <strong>Loading activities...</strong>
+                <p>Please wait while we load the schedule.</p>
+            </div>
+        }
+        else if (activities.Count == 0 &&
+                 string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="activities-state">
+                <span class="activities-empty-icon bi bi-calendar-x"
+                      aria-hidden="true"></span>
+
+                <strong>No activities found</strong>
+                <p>
+                    No activities have been scheduled
+                    for this module yet.
+                </p>
+            </div>
+        }
+        else if (activities.Count > 0)
+        {
+            <div class="activities-table-wrapper">
+                <table class="activities-table">
+                    <thead>
+                        <tr>
+                            <th>ACTIVITY TYPE</th>
+                            <th>TITLE</th>
+                            <th>DESCRIPTION</th>
+                            <th>START TIME</th>
+                            <th>END TIME</th>
+
+                            @if (isTeacher)
+                            {
+                                <th class="activities-actions-heading">
+                                    ACTIONS
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var activity in activities)
+                        {
+                            <tr @key="activity.Id">
+                                <td>
+                                    <span class="activities-type-badge">
+                                        @(activity.ActionTypeName ?? "Unknown")
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="activities-title">
+                                        @activity.Title
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="activities-description">
+                                        @activity.Description
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @activity.StartDate.ToString("yyyy-MM-dd HH:mm")
+                                </td>
+
+                                <td>
+                                    @activity.EndDate.ToString("yyyy-MM-dd HH:mm")
+                                </td>
+
+                                @if (isTeacher)
+                                {
+                                    <td class="activities-actions-cell">
+                                        <div class="activities-actions">
+
+                                            <a class="activities-edit-button"
+                                               href="@($"/activities/edit/{activity.Id}")">
+                                                <span class="bi bi-pencil"
+                                                      aria-hidden="true"></span>
+                                                Edit
+                                            </a>
+
+                                            <button type="button"
+                                                    class="activities-delete-button"
+                                                    disabled="@isDeleting"
+                                                    @onclick="() => OpenDeleteDialog(activity.Id, activity.Title)">
+                                                <span class="bi bi-trash"
+                                                      aria-hidden="true"></span>
+                                                Delete
+                                            </button>
+
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (pagedResponse is not null &&
+                 pagedResponse.TotalPages > 1)
+            {
+                <div class="activities-pagination">
+
+                    <button type="button"
+                            class="activities-page-button"
+                            disabled="@(!pagedResponse.HasPreviousPage)"
+                            @onclick="PreviousPage">
+                        <span class="bi bi-chevron-left"
+                              aria-hidden="true"></span>
+                        Previous
+                    </button>
+
+                    <span class="activities-page-info">
+                        Page @pagedResponse.PageNumber
+                        of @pagedResponse.TotalPages
+                    </span>
+
+                    <button type="button"
+                            class="activities-page-button"
+                            disabled="@(!pagedResponse.HasNextPage)"
+                            @onclick="NextPage">
+                        Next
+                        <span class="bi bi-chevron-right"
+                              aria-hidden="true"></span>
+                    </button>
+
+                </div>
+            }
+        }
+
+    </section>
+
+    <!-- BACK BUTTON -->
+    @if (courseId.HasValue)
+    {
+        <div class="activities-footer">
+            <a class="activities-back-button"
+               href="@($"/courses/{courseId.Value}/modules")">
+                <span class="bi bi-arrow-left"
+                      aria-hidden="true"></span>
+                Back to Module Management
+            </a>
+        </div>
+    }
+
+</div>
+
+<!-- DELETE CONFIRMATION DIALOG -->
+@if (showDeleteDialog && isTeacher)
+{
+    <div class="activities-dialog-overlay">
+
+        <div class="activities-dialog"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="deleteActivityTitle"
+             aria-describedby="deleteActivityDescription">
+
+            <div class="activities-dialog-header">
+
+                <span class="activities-dialog-icon bi bi-trash"
+                      aria-hidden="true"></span>
+
+                <div>
+                    <h2 id="deleteActivityTitle">
+                        Delete Activity
+                    </h2>
+
+                    <p>Confirm deletion</p>
+                </div>
+
+            </div>
+
+            <div class="activities-dialog-body">
+
+                <p id="deleteActivityDescription">
+                    Are you sure you want to delete
+                    this activity?
+                </p>
+
+                <strong>@selectedActivityTitle</strong>
+
+                <p class="activities-dialog-warning">
+                    This action cannot be undone.
+                </p>
+
+            </div>
+
+            <div class="activities-dialog-footer">
+
+                <button type="button"
+                        class="activities-dialog-cancel"
+                        disabled="@isDeleting"
+                        @onclick="CloseDeleteDialog">
+                    Cancel
+                </button>
+
+                <button type="button"
+                        class="activities-dialog-confirm"
+                        disabled="@isDeleting"
+                        @onclick="ConfirmDeleteActivity">
+
+                    @if (isDeleting)
+                    {
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-trash"
+                              aria-hidden="true"></span>
+                        <span>Delete Activity</span>
+                    }
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int ModuleId { get; set; }
+
+    private int? courseId;
+
+    private List<ActivityDto> activities = [];
+    private PagedResponse<ActivityDto>? pagedResponse;
+
+    private int currentPage = 1;
+    private const int PageSize = 10;
+
+    private bool isLoading = true;
+    private bool isTeacher;
+    private bool isDeleting;
+    private string? errorMessage;
+
+    // DELETE DIALOG STATE
+    private bool showDeleteDialog;
+    private int? selectedActivityId;
+    private string? selectedActivityTitle;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider
+                .GetAuthenticationStateAsync();
+
+        isTeacher = authState.User.IsInRole("Teacher");
+
+        showDeleteDialog = false;
+        selectedActivityId = null;
+        selectedActivityTitle = null;
+
+        currentPage = 1;
+
+        await LoadActivities();
+    }
+
+    private async Task LoadActivities()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var module =
+                await ApiProxyClient.GetAsync<ModuleDto>(
+                    $"Module/{ModuleId}");
+
+            courseId = module?.CourseId;
+
+            var response =
+                await ApiProxyClient.GetAsync<PagedResponse<ActivityDto>>(
+                    $"Activity/module/{ModuleId}?PageNumber={currentPage}&PageSize={PageSize}");
+
+            pagedResponse = response;
+
+            activities = response?.Items
+                .OrderBy(a => a.StartDate)
+                .ThenBy(a => a.Id)
+                .ToList() ?? [];
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // OPEN DELETE DIALOG
+    private void OpenDeleteDialog(int id, string? title)
+    {
+        if (!isTeacher || isDeleting)
+            return;
+
+        selectedActivityId = id;
+        selectedActivityTitle = title;
+        showDeleteDialog = true;
+    }
+
+    // CLOSE DELETE DIALOG
+    private void CloseDeleteDialog()
+    {
+        if (isDeleting)
+            return;
+
+        showDeleteDialog = false;
+        selectedActivityId = null;
+        selectedActivityTitle = null;
+    }
+
+    // CONFIRM DELETE
+    private async Task ConfirmDeleteActivity()
+    {
+        if (!isTeacher || isDeleting ||
+            !showDeleteDialog || selectedActivityId is null)
+            return;
+
+        isDeleting = true;
+        errorMessage = null;
+
+        var id = selectedActivityId.Value;
+
+        try
+        {
+            await ApiProxyClient.DeleteAsync($"Activity/{id}");
+
+            showDeleteDialog = false;
+            selectedActivityId = null;
+            selectedActivityTitle = null;
+
+            // Reload to update the total count and pagination.
+            await LoadActivities();
+
+            // If the last item on a later page was deleted,
+            // return to the preceding page.
+            if (activities.Count == 0 &&
+                currentPage > 1 &&
+                string.IsNullOrWhiteSpace(errorMessage))
+            {
+                currentPage--;
+                await LoadActivities();
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+
+            showDeleteDialog = false;
+            selectedActivityId = null;
+            selectedActivityTitle = null;
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (pagedResponse is null ||
+            !pagedResponse.HasNextPage)
+            return;
+
+        currentPage++;
+        await LoadActivities();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (pagedResponse is null ||
+            !pagedResponse.HasPreviousPage)
+            return;
+
+        currentPage--;
+        await LoadActivities();
+    }
+}

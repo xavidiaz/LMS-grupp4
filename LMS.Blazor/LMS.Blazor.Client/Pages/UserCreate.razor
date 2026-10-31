@@ -1,0 +1,324 @@
+﻿
+@page "/users/create"
+
+@using LMS.Blazor.Client.Helper
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Shared.DTOs.UserDtos
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Add User</PageTitle>
+
+<div class="user-create-page">
+
+    <!-- PAGE HEADER -->
+    <header class="user-create-header">
+        <div class="user-create-header-text">
+            <h1>Add User</h1>
+            <p>Create a new user and assign a role and course.</p>
+        </div>
+    </header>
+
+    <!-- MAIN CARD -->
+    <section class="user-create-card">
+
+        <!-- CARD HEADER -->
+        <div class="user-create-card-header">
+            <div>
+                <h2>User Information</h2>
+                <p>Enter the details for the new user below.</p>
+            </div>
+
+            <span class="user-create-header-icon bi bi-person-plus"
+                  aria-hidden="true"></span>
+        </div>
+
+        <!-- LOADING COURSES -->
+        @if (isLoadingCourses)
+        {
+            <div class="user-create-loading">
+                <span class="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"></span>
+                <span>Loading courses...</span>
+            </div>
+        }
+
+        <!-- ERROR MESSAGE -->
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="user-create-error" role="alert">
+                <span class="bi bi-exclamation-circle"
+                      aria-hidden="true"></span>
+
+                <span>
+                    <strong>Error:</strong> @errorMessage
+                </span>
+            </div>
+        }
+
+        <!-- CREATE USER FORM -->
+        <EditForm Model="model" OnValidSubmit="CreateUser">
+
+            <DataAnnotationsValidator />
+
+            <div class="user-create-form">
+
+                <div class="user-create-validation">
+                    <ValidationSummary />
+                </div>
+
+                <!-- FIRST NAME AND LAST NAME -->
+                <div class="user-create-name-grid">
+
+                    <div class="user-create-field">
+                        <label for="firstName">First Name</label>
+
+                        <InputText id="firstName"
+                                   class="user-create-input"
+                                   @bind-Value="model.FirstName"
+                                   placeholder="Enter first name" />
+
+                        <ValidationMessage
+                            For="@(() => model.FirstName)" />
+                    </div>
+
+                    <div class="user-create-field">
+                        <label for="lastName">Last Name</label>
+
+                        <InputText id="lastName"
+                                   class="user-create-input"
+                                   @bind-Value="model.LastName"
+                                   placeholder="Enter last name" />
+
+                        <ValidationMessage
+                            For="@(() => model.LastName)" />
+                    </div>
+
+                </div>
+
+                <!-- EMAIL -->
+                <div class="user-create-field">
+                    <label for="email">Email</label>
+
+                    <InputText id="email"
+                               class="user-create-input"
+                               type="email"
+                               @bind-Value="model.Email"
+                               placeholder="Enter email address" />
+
+                    <ValidationMessage
+                        For="@(() => model.Email)" />
+                </div>
+
+                <!-- ROLE -->
+                <div class="user-create-field">
+                    <label for="userRole">Role</label>
+
+                    <InputSelect id="userRole"
+                                 class="user-create-input"
+                                 @bind-Value="model.Role">
+
+                        <option value="">-- Select role --</option>
+                        <option value="Student">Student</option>
+                        <option value="Teacher">Teacher</option>
+
+                    </InputSelect>
+
+                    <ValidationMessage
+                        For="@(() => model.Role)" />
+                </div>
+
+                <!-- COURSE -->
+                <div class="user-create-field">
+                    <label for="userCourse">Course (Optional)</label>
+
+                    <InputSelect id="userCourse"
+                                 class="user-create-input"
+                                 @bind-Value="model.CourseId"
+                                 disabled="@isLoadingCourses">
+
+                        <option value="">-- Select course --</option>
+
+                        @foreach (var course in courses)
+                        {
+                            <option value="@course.Id">
+                                @course.Name
+                            </option>
+                        }
+
+                    </InputSelect>
+
+                    <p class="user-create-help-text">
+                        Select a course to assign to the user,
+                        or leave it unassigned.
+                    </p>
+                </div>
+
+                <!-- PASSWORD INFORMATION -->
+                <div class="user-create-info">
+
+                    <span class="user-create-info-icon bi bi-info-circle"
+                          aria-hidden="true"></span>
+
+                    <div>
+                        <strong>Password Setup</strong>
+
+                        <p>
+                            The user will receive a password setup link
+                            after the account has been created.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- FORM FOOTER -->
+            <div class="user-create-footer">
+
+                <button type="button"
+                        class="user-create-cancel-button"
+                        @onclick="Cancel"
+                        disabled="@isSaving">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="user-create-save-button"
+                        disabled="@isSaving">
+
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm"
+                              role="status"
+                              aria-hidden="true"></span>
+
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-person-plus"
+                              aria-hidden="true"></span>
+
+                        <span>Create User</span>
+                    }
+
+                </button>
+
+            </div>
+
+        </EditForm>
+
+    </section>
+
+</div>
+
+@code {
+    private CreateUserDto model = new();
+
+    private List<CourseDto> courses = new();
+
+    private bool isSaving;
+    private bool isLoadingCourses = true;
+
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourses();
+    }
+
+    private async Task LoadCourses()
+    {
+        isLoadingCourses = true;
+
+        try
+        {
+            var result = await ApiProxyClient
+                .GetAsync<List<CourseDto>>("Courses");
+
+            courses = result ?? new List<CourseDto>();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Failed to load courses. Please try again.";
+        }
+        finally
+        {
+            isLoadingCourses = false;
+        }
+    }
+
+    private async Task CreateUser()
+    {
+        if (isSaving)
+        {
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await ApiProxyClient.PostAsync<
+                CreateUserDto,
+                CreateUserResponseDto>(
+                "users",
+                model);
+
+            if (result is null)
+            {
+                errorMessage = "The user could not be created.";
+                return;
+            }
+
+            var setupUrl =
+                $"/users/set-password" +
+                $"?userId={Uri.EscapeDataString(result.User.Id)}" +
+                $"&token={Uri.EscapeDataString(result.PasswordSetupToken)}";
+
+            NavigationManager.NavigateTo(setupUrl);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "An unexpected error occurred while creating the user.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+}

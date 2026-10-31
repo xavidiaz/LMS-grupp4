@@ -1,0 +1,136 @@
+﻿
+@using System.ComponentModel.DataAnnotations
+@using LMS.Blazor.Client.Models
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+
+<EditForm Model="Model" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="course-form">
+
+        <!-- VALIDATION -->
+        <ValidationSummary />
+
+        <!-- COURSE NAME -->
+        <div class="mb-3">
+            <label for="courseName" class="form-label">
+                Name
+            </label>
+
+            <InputText id="courseName"
+                       class="form-control"
+                       @bind-Value="Model.Name"
+                       placeholder="Enter course name" />
+
+            <ValidationMessage For="() => Model.Name" />
+        </div>
+
+        <!-- COURSE CODE -->
+        <div class="mb-3">
+            <label for="courseCode" class="form-label">
+                Code
+            </label>
+
+            <InputText id="courseCode"
+                       class="form-control"
+                       @bind-Value="Model.Code"
+                       placeholder="Enter course code" />
+
+            <ValidationMessage For="() => Model.Code" />
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="mb-3">
+            <label for="courseDescription" class="form-label">
+                Description
+            </label>
+
+            <InputTextArea id="courseDescription"
+                           class="form-control"
+                           @bind-Value="Model.Description"
+                           rows="4"
+                           placeholder="Describe the course" />
+
+            <ValidationMessage For="() => Model.Description" />
+        </div>
+
+        <!-- COURSE DATES -->
+        <div class="course-form-date-grid">
+
+            <div class="mb-3">
+                <label for="courseStartDate" class="form-label">
+                    Start Date
+                </label>
+
+                <InputDate id="courseStartDate"
+                           class="form-control"
+                           @bind-Value="Model.StartDate" />
+
+                <ValidationMessage For="() => Model.StartDate" />
+            </div>
+
+            <div class="mb-3">
+                <label for="courseEndDate" class="form-label">
+                    End Date
+                </label>
+
+                <InputDate id="courseEndDate"
+                           class="form-control"
+                           @bind-Value="Model.EndDate" />
+
+                <ValidationMessage For="() => Model.EndDate" />
+            </div>
+
+        </div>
+
+        <!-- FORM ACTIONS -->
+        <div class="course-form-actions">
+
+            @if (!string.IsNullOrWhiteSpace(CancelUrl))
+            {
+                <a class="course-form-cancel"
+                   href="@CancelUrl">
+                    Cancel
+                </a>
+            }
+
+            <button type="submit"
+                    class="btn btn-primary"
+                    disabled="@IsSubmitting">
+
+                @if (IsSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm"
+                          role="status"
+                          aria-hidden="true"></span>
+                    <span>Processing...</span>
+                }
+                else
+                {
+                    <span>@SubmitButtonText</span>
+                }
+
+            </button>
+
+        </div>
+
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public CourseFormModel Model { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnValidSubmit { get; set; }
+
+    [Parameter]
+    public bool IsSubmitting { get; set; }
+
+    [Parameter]
+    public string SubmitButtonText { get; set; } = "Submit";
+
+    [Parameter]
+    public string? CancelUrl { get; set; }
+}

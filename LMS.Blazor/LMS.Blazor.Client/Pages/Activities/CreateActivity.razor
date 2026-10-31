@@ -1,0 +1,394 @@
+﻿
+@page "/activities/create/{ModuleId:int}"
+
+@using LMS.Shared.DTOs.Activity
+@using LMS.Shared.DTOs.Module
+@using LMS.Shared.DTOs.ActionType
+@using LMS.Shared.Paging
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create Activity</PageTitle>
+
+<div class="create-activity-page">
+
+    <!-- PAGE HEADER -->
+    <header class="create-activity-header">
+        <div class="create-activity-header-text">
+            <h1>Create Activity</h1>
+            <p>Add a new activity and schedule it within a course module.</p>
+        </div>
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="create-activity-card">
+            <div class="create-activity-state">
+
+                <div class="spinner-border create-activity-spinner"
+                     role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+
+                <strong>Loading module information...</strong>
+                <p>Please wait while we prepare the activity form.</p>
+
+            </div>
+        </div>
+    }
+    else if (module is null)
+    {
+        <div class="create-activity-card">
+
+            <div class="create-activity-error" role="alert">
+                <span class="bi bi-exclamation-circle"
+                      aria-hidden="true"></span>
+                <span>
+                    @(errorMessage ?? "The module could not be loaded.")
+                </span>
+            </div>
+
+            <div class="create-activity-footer">
+                <a class="create-activity-cancel-button"
+                   href="/courses">
+                    <span class="bi bi-arrow-left"
+                          aria-hidden="true"></span>
+                    Back to Courses
+                </a>
+            </div>
+
+        </div>
+    }
+    else
+    {
+        <div class="create-activity-card">
+
+            <!-- CARD HEADER -->
+            <div class="create-activity-card-header">
+                <div>
+                    <h2>Activity Information</h2>
+                    <p>Enter the details for the new activity below.</p>
+                </div>
+
+                <span class="create-activity-header-icon bi bi-calendar-plus"
+                      aria-hidden="true"></span>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="create-activity-error" role="alert">
+                    <span class="bi bi-exclamation-circle"
+                          aria-hidden="true"></span>
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <!-- CREATE FORM -->
+            <EditForm Model="activity"
+                      OnValidSubmit="Create">
+
+                <DataAnnotationsValidator />
+
+                <div class="create-activity-form">
+
+                    <div class="create-activity-validation">
+                        <ValidationSummary />
+                    </div>
+
+                    <!-- ACTIVITY TYPE -->
+                    <div class="create-activity-field">
+
+                        <label for="activityType">
+                            Activity Type
+                        </label>
+
+                        <InputSelect id="activityType"
+                                     class="create-activity-input"
+                                     @bind-Value="activity.ActionTypeId">
+
+                            <option value="0">
+                                -- Select Activity Type --
+                            </option>
+
+                            @foreach (var actionType in actionTypes)
+                            {
+                                <option value="@actionType.Id">
+                                    @actionType.Name
+                                </option>
+                            }
+
+                        </InputSelect>
+
+                        <ValidationMessage
+                            For="@(() => activity.ActionTypeId)" />
+
+                    </div>
+
+                    <!-- TITLE -->
+                    <div class="create-activity-field">
+
+                        <label for="activityTitle">
+                            Title
+                        </label>
+
+                        <InputText id="activityTitle"
+                                   class="create-activity-input"
+                                   @bind-Value="activity.Title"
+                                   placeholder="Enter activity title" />
+
+                        <ValidationMessage
+                            For="@(() => activity.Title)" />
+
+                    </div>
+
+                    <!-- DESCRIPTION -->
+                    <div class="create-activity-field">
+
+                        <label for="activityDescription">
+                            Description
+                        </label>
+
+                        <InputTextArea id="activityDescription"
+                                       class="create-activity-input create-activity-textarea"
+                                       @bind-Value="activity.Description"
+                                       rows="4"
+                                       placeholder="Describe the activity" />
+
+                        <ValidationMessage
+                            For="@(() => activity.Description)" />
+
+                    </div>
+
+                    <!-- DATE AND TIME -->
+                    <div class="create-activity-date-grid">
+
+                        <div class="create-activity-field">
+
+                            <label for="activityStart">
+                                Start Time
+                            </label>
+
+                            <InputDate id="activityStart"
+                                       class="create-activity-input"
+                                       Type="InputDateType.DateTimeLocal"
+                                       @bind-Value="activity.StartDate" />
+
+                            <ValidationMessage
+                                For="@(() => activity.StartDate)" />
+
+                        </div>
+
+                        <div class="create-activity-field">
+
+                            <label for="activityEnd">
+                                End Time
+                            </label>
+
+                            <InputDate id="activityEnd"
+                                       class="create-activity-input"
+                                       Type="InputDateType.DateTimeLocal"
+                                       @bind-Value="activity.EndDate" />
+
+                            <ValidationMessage
+                                For="@(() => activity.EndDate)" />
+
+                        </div>
+
+                    </div>
+
+                    <!-- MODULE PERIOD INFO -->
+                    <div class="create-activity-info">
+
+                        <span class="create-activity-info-icon bi bi-info-circle"
+                              aria-hidden="true"></span>
+
+                        <div>
+                            <strong>Module Period</strong>
+
+                            <p class="create-activity-period">
+                                @module.StartDate.ToString("yyyy-MM-dd")
+                                –
+                                @module.EndDate.ToString("yyyy-MM-dd")
+                            </p>
+
+                            <p>
+                                The activity must be scheduled within this
+                                period and must not overlap another activity
+                                in the module.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- FORM FOOTER -->
+                <div class="create-activity-footer">
+
+                    <a class="create-activity-cancel-button"
+                       href="@($"/modules/{ModuleId}/activities")">
+                        Cancel
+                    </a>
+
+                    <button type="submit"
+                            class="create-activity-save-button"
+                            disabled="@isSaving">
+
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm"
+                                  role="status"
+                                  aria-hidden="true"></span>
+
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <span class="bi bi-plus-circle"
+                                  aria-hidden="true"></span>
+
+                            <span>Create Activity</span>
+                        }
+
+                    </button>
+
+                </div>
+
+            </EditForm>
+
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    public int ModuleId { get; set; }
+
+    private CreateActivityDto activity = new();
+    private ModuleDto? module;
+    private List<ActionTypeDto> actionTypes = new();
+
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        activity = new CreateActivityDto
+        {
+            ModuleId = ModuleId
+        };
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = null;
+        module = null;
+        actionTypes = new();
+
+        try
+        {
+            // Load module information
+            module = await ApiProxyClient.GetAsync<ModuleDto>(
+                $"Module/{ModuleId}");
+
+            if (module is null)
+            {
+                errorMessage = "Module not found.";
+                return;
+            }
+
+            // Load action types from the paginated API response
+            var response = await ApiProxyClient
+                .GetAsync<PagedResponse<ActionTypeDto>>("ActionType");
+
+            actionTypes = response?.Items?.ToList()
+                ?? new List<ActionTypeDto>();
+
+            if (actionTypes.Count == 0)
+            {
+                errorMessage = "No activity types are available.";
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Create()
+    {
+        if (isSaving || module is null)
+            return;
+
+        errorMessage = null;
+
+        if (activity.ActionTypeId <= 0 ||
+            !actionTypes.Any(x => x.Id == activity.ActionTypeId))
+        {
+            errorMessage = "Please select a valid activity type.";
+            return;
+        }
+
+        if (activity.StartDate >= activity.EndDate)
+        {
+            errorMessage =
+                "The start time must be earlier than the end time.";
+            return;
+        }
+
+        if (activity.StartDate < module.StartDate ||
+            activity.EndDate > module.EndDate)
+        {
+            errorMessage =
+                "The activity must be within the module's date range.";
+            return;
+        }
+
+        activity.ModuleId = ModuleId;
+        isSaving = true;
+
+        try
+        {
+            await ApiProxyClient.PostAsync<CreateActivityDto, ActivityDto>(
+                "Activity",
+                activity);
+
+            NavigationManager.NavigateTo(
+                $"/modules/{ModuleId}/activities");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

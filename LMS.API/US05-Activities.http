@@ -1,0 +1,297 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Activities and activity types – user story US05
+# Run top to bottom.
+# Creates one course, module and activity, and deletes them at the end.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Student logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 3. Teacher creates a course for this test (200)
+POST {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP test course",
+  "code": "HTTP-TEST",
+  "description": "Created by a .http file. Deleted at the end.",
+  "startDate": "2030-01-01T00:00:00",
+  "endDate": "2030-12-31T00:00:00"
+}
+
+> {%
+  client.global.set("courseId", response.body.id);
+%}
+
+### 4. Teacher creates a module for this test (201)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-01T00:00:00",
+  "endDate": "2030-02-28T00:00:00"
+}
+
+> {%
+  client.global.set("moduleId", response.body.id);
+%}
+
+# --- Activity types ---
+
+### 5. Teacher lists activity types (200)
+GET {{LMS.API_HostAddress}}/api/ActionType
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  client.global.set("actionTypeId", response.body.items[0].id);
+%}
+
+### 6. Student lists activity types (200)
+GET {{LMS.API_HostAddress}}/api/ActionType
+Authorization: Bearer {{studentToken}}
+
+### 7. No token (401)
+GET {{LMS.API_HostAddress}}/api/ActionType
+
+# --- Create activity ---
+
+### 8. Teacher creates an activity (201)
+POST {{LMS.API_HostAddress}}/api/Activity
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-05T09:00:00",
+  "endDate": "2030-02-05T12:00:00"
+}
+
+> {%
+  client.global.set("activityId", response.body.id);
+%}
+
+### 9. Dates overlap the first activity (409)
+POST {{LMS.API_HostAddress}}/api/Activity
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "Overlap",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-05T10:00:00",
+  "endDate": "2030-02-05T11:00:00"
+}
+
+### 10. End date before start date (400)
+POST {{LMS.API_HostAddress}}/api/Activity
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-10T12:00:00",
+  "endDate": "2030-02-10T09:00:00"
+}
+
+### 11. Dates outside the module (400)
+POST {{LMS.API_HostAddress}}/api/Activity
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-06-01T09:00:00",
+  "endDate": "2030-06-01T12:00:00"
+}
+
+### 12. Module does not exist (404)
+POST {{LMS.API_HostAddress}}/api/Activity
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": 999999,
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-05T09:00:00",
+  "endDate": "2030-02-05T12:00:00"
+}
+
+### 13. Student creates an activity (403)
+POST {{LMS.API_HostAddress}}/api/Activity
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-12T09:00:00",
+  "endDate": "2030-02-12T12:00:00"
+}
+
+### 14. No token (401)
+POST {{LMS.API_HostAddress}}/api/Activity
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-05T09:00:00",
+  "endDate": "2030-02-05T12:00:00"
+}
+
+# --- Read activities ---
+
+### 15. Teacher lists activities (200)
+GET {{LMS.API_HostAddress}}/api/Activity?PageNumber=1&PageSize=5
+Authorization: Bearer {{teacherToken}}
+
+### 16. Teacher lists the module's activities (200)
+GET {{LMS.API_HostAddress}}/api/Activity/module/{{moduleId}}
+Authorization: Bearer {{teacherToken}}
+
+### 17. Teacher reads one activity (200)
+GET {{LMS.API_HostAddress}}/api/Activity/{{activityId}}
+Authorization: Bearer {{teacherToken}}
+
+### 18. Activity does not exist (404)
+GET {{LMS.API_HostAddress}}/api/Activity/999999
+Authorization: Bearer {{teacherToken}}
+
+### 19. Type of the activity (200, returns 204 today)
+GET {{LMS.API_HostAddress}}/api/ActionType/activity/{{activityId}}
+Authorization: Bearer {{teacherToken}}
+
+### 20. Type of an activity that does not exist (404, returns 204 today)
+GET {{LMS.API_HostAddress}}/api/ActionType/activity/999999
+Authorization: Bearer {{teacherToken}}
+
+# --- Update activity ---
+
+### 21. Teacher updates the activity (200)
+PUT {{LMS.API_HostAddress}}/api/Activity/{{activityId}}
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity updated",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-05T09:00:00",
+  "endDate": "2030-02-05T12:00:00"
+}
+
+### 22. Activity does not exist (404)
+PUT {{LMS.API_HostAddress}}/api/Activity/999999
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-05T09:00:00",
+  "endDate": "2030-02-05T12:00:00"
+}
+
+### 23. Dates outside the module (400)
+PUT {{LMS.API_HostAddress}}/api/Activity/{{activityId}}
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-06-01T09:00:00",
+  "endDate": "2030-06-01T12:00:00"
+}
+
+### 24. Student updates the activity (403)
+PUT {{LMS.API_HostAddress}}/api/Activity/{{activityId}}
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "moduleId": {{moduleId}},
+  "actionTypeId": {{actionTypeId}},
+  "title": "HTTP activity",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-05T09:00:00",
+  "endDate": "2030-02-05T12:00:00"
+}
+
+# --- Delete activity ---
+
+### 25. Student deletes the activity (403)
+DELETE {{LMS.API_HostAddress}}/api/Activity/{{activityId}}
+Authorization: Bearer {{studentToken}}
+
+### 26. Teacher deletes the activity (204)
+DELETE {{LMS.API_HostAddress}}/api/Activity/{{activityId}}
+Authorization: Bearer {{teacherToken}}
+
+### 27. Delete the same activity again (404)
+DELETE {{LMS.API_HostAddress}}/api/Activity/{{activityId}}
+Authorization: Bearer {{teacherToken}}
+
+### 28. Teacher deletes the test module (204)
+DELETE {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{teacherToken}}
+
+### 29. Teacher deletes the test course (200)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{courseId}}
+Authorization: Bearer {{teacherToken}}

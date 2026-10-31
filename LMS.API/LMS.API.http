@@ -1,6 +1,362 @@
-@LMS.API_HostAddress = http://localhost:5237
+@LMS.API_HostAddress = http://localhost:5279
+@NotificationId = 1
+@CourseId = 1
 
-GET {{LMS.API_HostAddress}}/weatherforecast/
+### Root (404, only checks that the API answers)
+GET {{LMS.API_HostAddress}}/
 Accept: application/json
 
-###
+########################################
+# Auth
+########################################
+
+### Auth Login as demo user
+# @name login
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "DemoUser@Lms.com",
+  "password": "Dev!qNVT3lFip31a"
+}
+
+> {%
+  if (response.status === 200) {
+    client.global.set("token", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+    client.global.set("accessTokenExpiresAtUtc", response.body.accessTokenExpiresAtUtc);
+    client.global.set("refreshTokenExpiresAtUtc", response.body.refreshTokenExpiresAtUtc);
+  }
+%}
+
+### Auth Login as teacher
+# @name teacherLogin
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "Dev!qNVT3lFip31a"
+}
+
+> {%
+  if (response.status === 200) {
+    client.global.set("teacherToken", response.body.accessToken);
+  }
+%}
+
+### Auth Login as student (course A)
+# @name studentLogin
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "Dev!qNVT3lFip31a"
+}
+
+> {%
+  if (response.status === 200) {
+    client.global.set("studentToken", response.body.accessToken);
+  }
+%}
+
+### Auth Login as student 2 (course B)
+# @name student2Login
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "Student2@Lms.com",
+  "password": "Dev!qNVT3lFip31a"
+}
+
+> {%
+  if (response.status === 200) {
+    client.global.set("student2Token", response.body.accessToken);
+  }
+%}
+
+### Auth Get authenticated user
+GET {{LMS.API_HostAddress}}/api/auth/me
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Auth Verify access token
+GET {{LMS.API_HostAddress}}/api/demo-auth
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Auth Call without access token (401)
+GET {{LMS.API_HostAddress}}/api/demo-auth
+Accept: application/json
+
+### Token Refresh
+POST {{LMS.API_HostAddress}}/api/token/refresh
+Content-Type: application/json
+Accept: application/json
+
+{
+  "accessToken": "{{token}}",
+  "refreshToken": "{{refreshToken}}",
+  "accessTokenExpiresAtUtc": "{{accessTokenExpiresAtUtc}}",
+  "refreshTokenExpiresAtUtc": "{{refreshTokenExpiresAtUtc}}"
+}
+
+> {%
+  if (response.status === 200) {
+    client.global.set("token", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+    client.global.set("accessTokenExpiresAtUtc", response.body.accessTokenExpiresAtUtc);
+    client.global.set("refreshTokenExpiresAtUtc", response.body.refreshTokenExpiresAtUtc);
+  }
+%}
+
+########################################
+# Courses
+########################################
+
+### Courses Get all courses (Teacher only)
+GET {{LMS.API_HostAddress}}/api/courses
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+### Courses Get all courses as student (403)
+GET {{LMS.API_HostAddress}}/api/courses
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+
+### Courses Create course
+POST {{LMS.API_HostAddress}}/api/courses
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Lexicon LTU",
+  "code": "LTU26",
+  "description": "Full-stack utbildning med fokus på .NET, databaser och frontend.",
+  "startDate": "2026-09-01T00:00:00",
+  "endDate": "2027-05-31T00:00:00"
+}
+
+### Courses Get course by id (Teacher, or Student in that course)
+GET {{LMS.API_HostAddress}}/api/courses/{{CourseId}}
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+### Courses Get own course by id as student (200)
+GET {{LMS.API_HostAddress}}/api/courses/1
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+
+### Courses Get other course by id as student (403)
+GET {{LMS.API_HostAddress}}/api/courses/2
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+
+### Courses Get my course as student (course A)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+
+### Courses Get my course as student 2 (course B)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Accept: application/json
+Authorization: Bearer {{student2Token}}
+
+### Courses Get my course as teacher (403, Student only)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+### Courses Get my course as demo user (403)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Courses Get my course participants as student (course A)
+GET {{LMS.API_HostAddress}}/api/courses/my-course/participants
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+
+### Courses Get my course participants as teacher (403, Student only)
+GET {{LMS.API_HostAddress}}/api/courses/my-course/participants
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+### Courses Patch course (Teacher only, only sent fields are updated)
+PATCH {{LMS.API_HostAddress}}/api/courses
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "id": {{CourseId}},
+  "description": "Uppdaterad beskrivning."
+}
+
+### Courses Patch course as demo user (403)
+PATCH {{LMS.API_HostAddress}}/api/courses
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{token}}
+
+{
+  "id": {{CourseId}},
+  "name": "Should not be allowed"
+}
+
+### Courses Delete course as demo user (403)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{CourseId}}
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Courses Delete course (Teacher only)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{CourseId}}
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+########################################
+# Documents
+########################################
+
+### Documents Upload text file to course (Teacher only)
+# @name uploadDocument
+POST {{LMS.API_HostAddress}}/api/documents
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Hello from LMS.API.http
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{CourseId}}
+--LmsBoundary--
+
+> {%
+  if (response.status === 200) {
+    client.global.set("documentId", response.body.id);
+  }
+%}
+
+### Documents Upload not allowed file type (400)
+POST {{LMS.API_HostAddress}}/api/documents
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="virus.exe"
+Content-Type: application/octet-stream
+
+not really an exe
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{CourseId}}
+--LmsBoundary--
+
+### Documents Upload as student (403)
+POST {{LMS.API_HostAddress}}/api/documents
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Students should not be able to upload here
+--LmsBoundary
+Content-Disposition: form-data; name="courseId"
+
+{{CourseId}}
+--LmsBoundary--
+
+### Documents Get course documents as teacher
+GET {{LMS.API_HostAddress}}/api/documents/course/{{CourseId}}
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+### Documents Get own course documents as student (200)
+GET {{LMS.API_HostAddress}}/api/documents/course/1
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+
+### Documents Get other course documents as student (403)
+GET {{LMS.API_HostAddress}}/api/documents/course/2
+Accept: application/json
+Authorization: Bearer {{studentToken}}
+
+### Documents Get module documents (Teacher only)
+GET {{LMS.API_HostAddress}}/api/documents/module/1
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+### Documents Download uploaded document as teacher
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{teacherToken}}
+
+### Documents Download uploaded document as student in course A (200)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{studentToken}}
+
+### Documents Download uploaded document as student 2 in course B (403)
+GET {{LMS.API_HostAddress}}/api/documents/{{documentId}}/download
+Authorization: Bearer {{student2Token}}
+
+### Documents Download missing document (404)
+GET {{LMS.API_HostAddress}}/api/documents/99999/download
+Authorization: Bearer {{teacherToken}}
+
+### Documents Delete document as student (403)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{studentToken}}
+
+### Documents Delete uploaded document (Teacher only, 204)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{teacherToken}}
+
+### Documents Delete same document again (404)
+DELETE {{LMS.API_HostAddress}}/api/documents/{{documentId}}
+Authorization: Bearer {{teacherToken}}
+
+########################################
+# Notifications
+########################################
+
+### Notifications Get notifications
+GET {{LMS.API_HostAddress}}/api/notifications
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Notifications Mark as read (404 until notifications are seeded)
+PATCH {{LMS.API_HostAddress}}/api/notifications/{{NotificationId}}/read
+Accept: application/json
+Authorization: Bearer {{token}}
+
+########################################
+# Users (Teacher only)
+########################################
+
+### Users Get users as demo user (403)
+GET {{LMS.API_HostAddress}}/api/users
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Users Get users
+GET {{LMS.API_HostAddress}}/api/users
+Accept: application/json
+Authorization: Bearer {{teacherToken}}
+
+# SAKNAS att testa endpoints for users GET, PUT, DELETE, POST

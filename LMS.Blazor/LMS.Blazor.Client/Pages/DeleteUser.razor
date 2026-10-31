@@ -1,0 +1,201 @@
+﻿@page "/users/delete/{Id}"
+
+@using LMS.Blazor.Client.Helper
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.UserDtos
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete User</PageTitle>
+
+<h3>Delete User</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <strong>Error:</strong> @errorMessage
+        </div>
+    }
+
+    @if (user is not null)
+    {
+        <div class="card">
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Are you sure you want to delete this user?
+                </h5>
+
+                <dl class="row mt-3">
+                    <dt class="col-sm-3">First Name</dt>
+                    <dd class="col-sm-9">@user.FirstName</dd>
+
+                    <dt class="col-sm-3">Last Name</dt>
+                    <dd class="col-sm-9">@user.LastName</dd>
+
+                    <dt class="col-sm-3">Email</dt>
+                    <dd class="col-sm-9">@user.Email</dd>
+
+                    <dt class="col-sm-3">Role</dt>
+                    <dd class="col-sm-9">@user.Role</dd>
+
+                    <dt class="col-sm-3">Course</dt>
+                    <dd class="col-sm-9">
+                        @(string.IsNullOrWhiteSpace(user.CourseName)
+                            ? "No course"
+                            : user.CourseName)
+                    </dd>
+                </dl>
+
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong>
+                    This action cannot be undone.
+                </div>
+
+                <button class="btn btn-danger"
+                        @onclick="SubmitDeleteUser"
+                        disabled="@isDeleting">
+
+                    @if (isDeleting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"
+                              role="status"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-trash"></span>
+                        <span>Delete User</span>
+                    }
+                </button>
+
+                <button class="btn btn-secondary ms-2"
+                        @onclick="Cancel"
+                        disabled="@isDeleting">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    }
+    else if (string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-info">
+            User not found.
+        </div>
+
+        <button class="btn btn-secondary" @onclick="Cancel">
+            Back to Users
+        </button>
+    }
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private UserDto? user;
+    private bool isLoading = true;
+    private bool isDeleting;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUser();
+    }
+
+    private async Task LoadUser()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            user = await ApiProxyClient.GetAsync<UserDto>(
+                $"users/{Id}");
+
+            if (user is null)
+            {
+                errorMessage = "User not found.";
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Unable to load the user. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SubmitDeleteUser()
+    {
+        if (isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        errorMessage = null;
+
+        try
+        {
+            await ApiProxyClient.DeleteAsync($"users/{Id}");
+
+            NavigationManager.NavigateTo("/users");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage =
+                "An unexpected error occurred while deleting the user.";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+}

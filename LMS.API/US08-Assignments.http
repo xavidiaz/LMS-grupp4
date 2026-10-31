@@ -1,0 +1,56 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Student's assignments and status – user story US08
+# Run top to bottom.
+# assignmentStatus: 0 = Submitted, 1 = Unsubmitted, 2 = Late. See #213.
+########################################
+
+### 1. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 2. Student lists assignments (200, only Course A)
+GET {{LMS.API_HostAddress}}/api/Activity/my-assignments?PageNumber=1&PageSize=100
+Authorization: Bearer {{studentToken}}
+
+### 3. Student reads the first page with 1 row (200)
+GET {{LMS.API_HostAddress}}/api/Activity/my-assignments?PageNumber=1&PageSize=1
+Authorization: Bearer {{studentToken}}
+
+### 4. Student in Course C logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Maria.Garcia@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentCToken", response.body.accessToken);
+%}
+
+### 5. Student C lists assignments (200, only Course C, some past deadline)
+GET {{LMS.API_HostAddress}}/api/Activity/my-assignments?PageNumber=1&PageSize=100
+Authorization: Bearer {{studentCToken}}
+
+### 6. Page size above the limit (400)
+GET {{LMS.API_HostAddress}}/api/Activity/my-assignments?PageSize=101
+Authorization: Bearer {{studentToken}}
+
+### 7. No token (401)
+GET {{LMS.API_HostAddress}}/api/Activity/my-assignments

@@ -1,0 +1,312 @@
+﻿
+@page "/users"
+
+@using LMS.Shared.DTOs.UserDtos
+@using LMS.Shared.Paging
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>User Management</PageTitle>
+
+<div class="users-page">
+
+    <!-- PAGE HEADER -->
+    <header class="users-header">
+
+        <div class="users-header-text">
+            <h1>User Management</h1>
+            <p>
+                Manage users, update their information
+                and assign them to courses.
+            </p>
+        </div>
+
+        <a href="/users/create"
+           class="users-add-button">
+            <span aria-hidden="true">+</span>
+            Add User
+        </a>
+
+    </header>
+
+    <!-- MAIN CARD -->
+    <section class="users-card">
+
+        <div class="users-card-header">
+            <div>
+                <h2>All Users</h2>
+
+                @if (!isLoading && string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    <p>@users.Count users on this page</p>
+                }
+                else
+                {
+                    <p>User overview</p>
+                }
+            </div>
+
+            <span class="users-header-icon"
+                  aria-hidden="true">
+                ♙
+            </span>
+        </div>
+        <div class="users-search">
+            <input type="search"
+                   class="form-control"
+                   placeholder="Search by name or email..."
+                   aria-label="Search users"
+                   @bind="searchTerm" />
+
+            <button type="button"
+                    class="users-add-button"
+                    @onclick="SearchUsers">
+                Search
+            </button>
+        </div>
+        @if (isLoading)
+        {
+            <div class="users-empty-state">
+                <div class="spinner-border"
+                     role="status">
+                    <span class="visually-hidden">
+                        Loading...
+                    </span>
+                </div>
+
+                <strong>Loading users...</strong>
+                <p>Please wait while we load the user list.</p>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="users-error-message"
+                 role="alert">
+                @errorMessage
+            </div>
+        }
+        else if (users.Count == 0)
+        {
+            <div class="users-empty-state">
+                <span class="users-empty-icon"
+                      aria-hidden="true">
+                    ♙
+                </span>
+
+                <strong>No users found</strong>
+
+                <p>
+                    @(string.IsNullOrWhiteSpace(searchTerm)
+                        ? "Users will appear here when they are added."
+                        : "Try a different name or email.")
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive users-table-wrapper">
+
+                <table class="users-table">
+
+                    <thead>
+                        <tr>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Course</th>
+                            <th class="users-actions-heading">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var user in users)
+                        {
+                            <tr>
+
+                                <td>
+                                    <span class="users-first-name">
+                                        @user.FirstName
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="users-last-name">
+                                        @user.LastName
+                                    </span>
+                                </td>
+
+                                <td class="users-email">
+                                    @user.Email
+                                </td>
+
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(user.CourseName))
+                                    {
+                                        <span class="users-no-course">
+                                            No course
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="users-course-badge">
+                                            @user.CourseName
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="users-actions">
+
+                                        <!-- EDIT -->
+                                        <a href="@($"/users/edit/{user.Id}")"
+                                           class="users-edit-button">
+                                            Edit
+                                        </a>
+
+                                        <!-- DELETE -->
+                                        <a href="@($"/users/delete/{user.Id}")"
+                                           class="users-delete-button">
+                                            Delete
+                                        </a>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- PAGINATION -->
+            @if (pagedResponse is not null &&
+                 pagedResponse.TotalPages > 1)
+            {
+                <div class="users-pagination">
+
+                    <button type="button"
+                            class="users-pagination-button"
+                            disabled="@(!pagedResponse.HasPreviousPage)"
+                            @onclick="PreviousPage">
+                        ← Previous
+                    </button>
+
+                    <span class="users-page-number">
+                        Page @pagedResponse.PageNumber
+                        of @pagedResponse.TotalPages
+                    </span>
+
+                    <button type="button"
+                            class="users-pagination-button"
+                            disabled="@(!pagedResponse.HasNextPage)"
+                            @onclick="NextPage">
+                        Next →
+                    </button>
+
+                </div>
+            }
+        }
+
+    </section>
+
+</div>
+
+@code {
+    private List<UserDto> users = [];
+
+    private PagedResponse<UserDto>? pagedResponse;
+
+    private bool isLoading = true;
+
+    private string? errorMessage;
+
+    private int currentPage = 1;
+
+    private string searchTerm = string.Empty;
+
+    private const int PageSize = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response =
+                await ApiProxyClient.GetAsync<PagedResponse<UserDto>>(
+                   $"users?pageNumber={currentPage}&pageSize={PageSize}&searchTerm={Uri.EscapeDataString(searchTerm.Trim())}");
+
+            if (response is not null)
+            {
+                pagedResponse = response;
+
+                users = response.Items.ToList();
+            }
+            else
+            {
+                users = [];
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task SearchUsers()
+    {
+        currentPage = 1;
+        await LoadUsers();
+    }
+    private async Task NextPage()
+    {
+        if (pagedResponse is null ||
+            !pagedResponse.HasNextPage)
+        {
+            return;
+        }
+
+        currentPage++;
+
+        await LoadUsers();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (pagedResponse is null ||
+            !pagedResponse.HasPreviousPage)
+        {
+            return;
+        }
+
+        currentPage--;
+
+        await LoadUsers();
+    }
+}

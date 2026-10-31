@@ -1,0 +1,164 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Feedback – user story US11
+# Run top to bottom.
+########################################
+
+# --- Setup ---
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Teacher finds the first module in Course A (id 1) (200)
+GET {{LMS.API_HostAddress}}/api/Module/course/1
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  client.global.set("moduleA", response.body.items[0].id);
+%}
+
+### 3. Teacher finds the assignment in that module (200)
+GET {{LMS.API_HostAddress}}/api/Activity/module/{{moduleA}}
+Authorization: Bearer {{teacherToken}}
+
+> {%
+  const a = response.body.items.find(x => x.actionTypeName === "Assignment");
+  client.global.set("assignmentId", a.id);
+%}
+
+### 4. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 5. Student submits (gives us a submissionId) (200)
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="answer.txt"
+Content-Type: text/plain
+
+Submission to get feedback on
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{assignmentId}}
+--LmsBoundary--
+
+> {%
+  client.global.set("submissionId", response.body.id);
+%}
+
+# --- Teacher gives feedback ---
+
+### 6. Teacher gives feedback (200)
+POST {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "comment": "Good work, but add more tests.",
+  "grade": 8.5
+}
+
+### 7. Grade out of range (400)
+POST {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "comment": "Too high",
+  "grade": 11
+}
+
+### 8. Empty comment (400)
+POST {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "comment": "",
+  "grade": 5
+}
+
+### 9. Submission does not exist (404)
+POST {{LMS.API_HostAddress}}/api/submissions/99999/feedback
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "comment": "Nobody here",
+  "grade": 5
+}
+
+### 10. Student tries to give feedback (403)
+POST {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "comment": "I grade myself",
+  "grade": 10
+}
+
+### 11. Teacher reads all feedback on the submission (200)
+GET {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback
+Authorization: Bearer {{teacherToken}}
+
+# --- Student reads feedback ---
+
+### 12. Student reads own feedback (200, includes teacherName)
+GET {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback/mine
+Authorization: Bearer {{studentToken}}
+
+### 13. Student 2 (Course B) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student2@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("student2Token", response.body.accessToken);
+%}
+
+### 14. Student 2 tries to read someone else's feedback (404)
+GET {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback/mine
+Authorization: Bearer {{student2Token}}
+
+### 15. Student 2 tries the teacher endpoint (403)
+GET {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback
+Authorization: Bearer {{student2Token}}
+
+# --- After #69 ---
+
+### 16. Student sees a notification about the new feedback (200)
+GET {{LMS.API_HostAddress}}/api/notifications
+Authorization: Bearer {{studentToken}}

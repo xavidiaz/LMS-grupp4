@@ -1,0 +1,182 @@
+﻿
+@page "/modules/edit/{Id:int}"
+
+@using LMS.Shared.DTOs.Module
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Module</PageTitle>
+
+<h3 class="mb-4">Edit Module</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage) && module is null)
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+else if (module is not null)
+{
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+
+    <EditForm Model="module" OnValidSubmit="UpdateModule">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Module Name</label>
+                    <InputText class="form-control"
+                               @bind-Value="module.Name"
+                               placeholder="Enter module name" />
+                    <ValidationMessage For="@(() => module.Name)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <InputTextArea class="form-control"
+                                   @bind-Value="module.Description"
+                                   placeholder="Enter module description"
+                                   rows="4" />
+                    <ValidationMessage For="@(() => module.Description)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Start Date</label>
+                    <InputDate class="form-control"
+                               @bind-Value="module.StartDate" />
+                    <ValidationMessage For="@(() => module.StartDate)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">End Date</label>
+                    <InputDate class="form-control"
+                               @bind-Value="module.EndDate" />
+                    <ValidationMessage For="@(() => module.EndDate)" />
+                </div>
+
+                <button type="submit"
+                        class="btn btn-primary"
+                        disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Save Changes")
+                </button>
+
+                <a class="btn btn-secondary ms-2"
+                   href="@($"/courses/{module.CourseId}/modules")">
+                    Cancel
+                </a>
+
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private UpdateModuleDto? module;
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadModule();
+    }
+
+    private async Task LoadModule()
+    {
+        isLoading = true;
+        errorMessage = null;
+        module = null;
+
+        try
+        {
+            var existing =
+                await ApiProxyClient.GetAsync<ModuleDto>(
+                    $"Module/{Id}");
+
+            if (existing is null)
+            {
+                errorMessage = "Module not found.";
+                return;
+            }
+
+            module = new UpdateModuleDto
+            {
+                CourseId = existing.CourseId,
+                Name = existing.Name,
+                Description = existing.Description,
+                StartDate = existing.StartDate,
+                EndDate = existing.EndDate
+            };
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task UpdateModule()
+    {
+        if (module is null)
+            return;
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            await ApiProxyClient.PutAsync<UpdateModuleDto, ModuleDto>(
+                $"Module/{Id}",
+                module);
+
+            NavigationManager.NavigateTo(
+                $"/courses/{module.CourseId}/modules");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

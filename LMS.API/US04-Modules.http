@@ -1,0 +1,282 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Modules – user story US04
+# Run top to bottom.
+# Creates one course and its modules, and deletes them at the end.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Student logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 3. Teacher creates a course for this test (200)
+POST {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP test course",
+  "code": "HTTP-TEST",
+  "description": "Created by a .http file. Deleted at the end.",
+  "startDate": "2030-01-01T00:00:00",
+  "endDate": "2030-12-31T00:00:00"
+}
+
+> {%
+  client.global.set("courseId", response.body.id);
+%}
+
+# --- Create module ---
+
+### 4. Teacher creates a module (201)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-01T00:00:00",
+  "endDate": "2030-02-28T00:00:00"
+}
+
+> {%
+  client.global.set("moduleId", response.body.id);
+%}
+
+### 5. Dates overlap the first module (409)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "Overlap",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-15T00:00:00",
+  "endDate": "2030-03-15T00:00:00"
+}
+
+### 6. End date before start date (400)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-05-10T00:00:00",
+  "endDate": "2030-05-01T00:00:00"
+}
+
+### 7. Dates outside the course (400)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2029-01-01T00:00:00",
+  "endDate": "2029-02-01T00:00:00"
+}
+
+### 8. Empty name (400)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "",
+  "description": "Created by a .http file.",
+  "startDate": "2030-06-01T00:00:00",
+  "endDate": "2030-06-30T00:00:00"
+}
+
+### 9. Course does not exist (404)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": 999999,
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-01T00:00:00",
+  "endDate": "2030-02-28T00:00:00"
+}
+
+### 10. Student creates a module (403)
+POST {{LMS.API_HostAddress}}/api/Module
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-07-01T00:00:00",
+  "endDate": "2030-07-31T00:00:00"
+}
+
+### 11. No token (401)
+POST {{LMS.API_HostAddress}}/api/Module
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-01T00:00:00",
+  "endDate": "2030-02-28T00:00:00"
+}
+
+# --- Read modules ---
+
+### 12. Teacher lists modules (200)
+GET {{LMS.API_HostAddress}}/api/Module?PageNumber=1&PageSize=5
+Authorization: Bearer {{teacherToken}}
+
+### 13. Teacher reads one module (200)
+GET {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{teacherToken}}
+
+### 14. Teacher reads a module with its course (200)
+GET {{LMS.API_HostAddress}}/api/Module/{{moduleId}}/course
+Authorization: Bearer {{teacherToken}}
+
+### 15. Teacher lists the course's modules (200)
+GET {{LMS.API_HostAddress}}/api/Module/course/{{courseId}}
+Authorization: Bearer {{teacherToken}}
+
+### 16. Module does not exist (404)
+GET {{LMS.API_HostAddress}}/api/Module/999999
+Authorization: Bearer {{teacherToken}}
+
+### 17. Module with course does not exist (404)
+GET {{LMS.API_HostAddress}}/api/Module/999999/course
+Authorization: Bearer {{teacherToken}}
+
+### 18. No token (401)
+GET {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+
+# --- Overlap check ---
+
+### 19. Dates overlap (200, isOverlapping true)
+GET {{LMS.API_HostAddress}}/api/Module/{{courseId}}/overlapping-dates?startDate=2030-02-10&endDate=2030-02-20
+Authorization: Bearer {{teacherToken}}
+
+### 20. Dates are free (200, isOverlapping false)
+GET {{LMS.API_HostAddress}}/api/Module/{{courseId}}/overlapping-dates?startDate=2030-08-01&endDate=2030-08-20
+Authorization: Bearer {{teacherToken}}
+
+### 21. Excluding the module itself (200, isOverlapping false)
+GET {{LMS.API_HostAddress}}/api/Module/{{courseId}}/overlapping-dates?startDate=2030-02-10&endDate=2030-02-20&excludeModuleId={{moduleId}}
+Authorization: Bearer {{teacherToken}}
+
+### 22. Student checks overlap (403)
+GET {{LMS.API_HostAddress}}/api/Module/{{courseId}}/overlapping-dates?startDate=2030-02-10&endDate=2030-02-20
+Authorization: Bearer {{studentToken}}
+
+# --- Update module ---
+
+### 23. Teacher updates the module (200)
+PUT {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module updated",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-01T00:00:00",
+  "endDate": "2030-02-28T00:00:00"
+}
+
+### 24. Module does not exist (404)
+PUT {{LMS.API_HostAddress}}/api/Module/999999
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-01T00:00:00",
+  "endDate": "2030-02-28T00:00:00"
+}
+
+### 25. Dates outside the course (400)
+PUT {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2029-01-01T00:00:00",
+  "endDate": "2029-02-01T00:00:00"
+}
+
+### 26. Student updates the module (403)
+PUT {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "courseId": {{courseId}},
+  "name": "HTTP module",
+  "description": "Created by a .http file.",
+  "startDate": "2030-02-01T00:00:00",
+  "endDate": "2030-02-28T00:00:00"
+}
+
+# --- Delete module ---
+
+### 27. Student deletes the module (403)
+DELETE {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{studentToken}}
+
+### 28. Teacher deletes the module (204)
+DELETE {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{teacherToken}}
+
+### 29. Delete the same module again (404)
+DELETE {{LMS.API_HostAddress}}/api/Module/{{moduleId}}
+Authorization: Bearer {{teacherToken}}
+
+### 30. Teacher deletes the test course (200)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{courseId}}
+Authorization: Bearer {{teacherToken}}

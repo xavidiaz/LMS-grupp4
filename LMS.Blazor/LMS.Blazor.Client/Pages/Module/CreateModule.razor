@@ -1,0 +1,208 @@
+﻿
+@page "/modules/create/{CourseId:int}"
+
+@using LMS.Shared.DTOs.Module
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create Module</PageTitle>
+
+<div class="create-module-page">
+
+    <!-- PAGE HEADER -->
+    <header class="create-module-header">
+        <div class="create-module-header-text">
+            <h1>Create Module</h1>
+            <p>Add a new module and manage its information and schedule.</p>
+        </div>
+    </header>
+
+    <!-- MAIN CARD -->
+    <section class="create-module-card">
+
+        <!-- CARD HEADER -->
+        <div class="create-module-card-header">
+            <div>
+                <h2>Module Information</h2>
+                <p>Enter the details for the new module below.</p>
+            </div>
+
+            <span class="create-module-header-icon bi bi-collection"
+                  aria-hidden="true"></span>
+        </div>
+
+        <!-- ERROR MESSAGE -->
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="create-module-error" role="alert">
+                <span class="bi bi-exclamation-circle"
+                      aria-hidden="true"></span>
+                <span>@errorMessage</span>
+            </div>
+        }
+
+        <!-- CREATE FORM -->
+        <EditForm Model="module" OnValidSubmit="CreateModules">
+
+            <DataAnnotationsValidator />
+
+            <div class="create-module-form">
+
+                <div class="create-module-validation">
+                    <ValidationSummary />
+                </div>                
+
+                <!-- MODULE NAME -->
+                <div class="create-module-field">
+                    <label for="moduleName">
+                        Module Name
+                    </label>
+
+                    <InputText id="moduleName"
+                               class="create-module-input"
+                               @bind-Value="module.Name"
+                               placeholder="Enter module name" />
+
+                    <ValidationMessage
+                        For="@(() => module.Name)" />
+                </div>
+
+                <!-- DESCRIPTION -->
+                <div class="create-module-field">
+                    <label for="moduleDescription">
+                        Description
+                    </label>
+
+                    <InputTextArea id="moduleDescription"
+                                   class="create-module-input create-module-textarea"
+                                   @bind-Value="module.Description"
+                                   placeholder="Enter module description"
+                                   rows="4" />
+
+                    <ValidationMessage
+                        For="@(() => module.Description)" />
+                </div>
+
+                <!-- DATE FIELDS -->
+                <div class="create-module-date-grid">
+
+                    <div class="create-module-field">
+                        <label for="moduleStartDate">
+                            Start Date
+                        </label>
+
+                        <InputDate id="moduleStartDate"
+                                   class="create-module-input"
+                                   @bind-Value="module.StartDate" />
+
+                        <ValidationMessage
+                            For="@(() => module.StartDate)" />
+                    </div>
+
+                    <div class="create-module-field">
+                        <label for="moduleEndDate">
+                            End Date
+                        </label>
+
+                        <InputDate id="moduleEndDate"
+                                   class="create-module-input"
+                                   @bind-Value="module.EndDate" />
+
+                        <ValidationMessage
+                            For="@(() => module.EndDate)" />
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- FORM FOOTER -->
+            <div class="create-module-footer">
+
+                <a class="create-module-cancel-button"
+                   href="@($"/courses/{CourseId}/modules")">
+                    Cancel
+                </a>
+
+                <button type="submit"
+                        class="create-module-save-button"
+                        disabled="@isSaving">
+
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm"
+                              role="status"
+                              aria-hidden="true"></span>
+
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-plus-circle"
+                              aria-hidden="true"></span>
+
+                        <span>Create Module</span>
+                    }
+
+                </button>
+
+            </div>
+
+        </EditForm>
+
+    </section>
+
+</div>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private CreateModuleDto module = new();
+
+    private bool isSaving;
+    private string? errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        module.CourseId = CourseId;
+    }
+
+    private async Task CreateModules()
+    {
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            module.CourseId = CourseId;
+
+            var created =
+                await ApiProxyClient.PostAsync<CreateModuleDto, ModuleDto>(
+                    "Module",
+                    module);
+
+            NavigationManager.NavigateTo(
+                $"/courses/{CourseId}/modules");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

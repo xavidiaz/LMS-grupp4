@@ -1,95 +1,371 @@
-﻿@page "/"
+﻿@page "/student-dashboard"
+@using LMS.Blazor.Client.Components
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.DashboardDtos
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@attribute [Authorize(Roles = "Student")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Dashboard</PageTitle>
 
-<div class="dashboard-page">
+<div class="student-dashboard">
 
-    <div class="dashboard-header">
-        <h1>Dashboard</h1>
-        <p>Här ser du veckans aktiviteter och kommande inlämningar.</p>
-    </div>
-
-    <section class="dashboard-section">
-        <h2>Veckans aktiviteter</h2>
-
-        <div class="activity-card">
-            <div>
-                <span class="activity-type">Föreläsning</span>
-                <h3>Introduction till React</h3>
-                <p>2026-10-06 · 09:00–12:00</p>
-            </div>
-            <span class="document-link">Dokument</span>
+    @if (dashboard is null)
+    {
+        <div class="dashboard-loading">
+            <p>Loading dashboard...</p>
         </div>
-
-        <div class="activity-card">
-            <div>
-                <span class="activity-type">Övning</span>
-                <h3>React komponenter</h3>
-                <p>2026-10-07 · 09:00–12:00</p>
+    }
+    else
+    {
+        <header class="dashboard-welcome">
+            <div class="welcome-copy">
+                <h1>Hi @displayName</h1>
+                <p>Welcome back. Here's what matters most in your course right now.</p>
             </div>
-            <span class="document-link">Dokument</span>
-        </div>
 
-        <div class="activity-card">
-            <div>
-                <span class="activity-type">E-learning</span>
-                <h3>React Hooks</h3>
-                <p>2026-10-08 · 09:00–12:00</p>
-            </div>
-        </div>
-    </section>
+            @if (dashboard.Course is not null)
+            {
+                <NavLink href="/course" class="course-summary">
+                    <span class="course-summary-icon">🎓</span>
 
-    <div class="dashboard-grid">
+                    <span class="course-summary-copy">
+                        <span class="course-summary-label">Your course</span>
+                        <strong>@dashboard.Course.Name</strong>
+                    </span>
+                </NavLink>
+            }
+        </header>
 
-        <section class="dashboard-section">
-            <h2>Kommande inlämningar</h2>
+        @if (dashboard.UpcomingActivities.FirstOrDefault() is { } nextActivity)
+        {
+            <section class="next-activity-card">
 
-            <div class="assignment-item">
+                <div class="next-activity-date">
+                    <span class="next-activity-label">Next activity</span>
+
+                    <div>
+                        <strong>
+                            @(nextActivity.StartDate.ToLocalTime().ToString("dd"))
+                        </strong>
+
+                        <small>
+                            @(nextActivity.StartDate.ToLocalTime().ToString("MMM · dddd"))
+                        </small>
+                    </div>
+                </div>
+
+                <div class="next-activity-content">
+
+                    <div class="next-activity-main">
+
+                        <span class="activity-type">
+                            @nextActivity.ActionTypeName
+                        </span>
+
+                        <h2>@nextActivity.Title</h2>
+
+                        <div class="activity-meta">
+
+                            <span>
+                                <span class="meta-icon">▣</span>
+                                @(nextActivity.StartDate.ToLocalTime().ToString("dddd, dd MMMM yyyy"))
+                            </span>
+
+                            <span>
+                                <span class="meta-icon">◷</span>
+                                @(nextActivity.StartDate.ToLocalTime().ToString("HH:mm"))
+                                –
+                                @(nextActivity.EndDate.ToLocalTime().ToString("HH:mm"))
+                            </span>
+
+                            @if (dashboard.Course is not null)
+                            {
+                                <span>
+                                    <span class="meta-icon">▤</span>
+                                    @dashboard.Course.Name
+                                </span>
+                            }
+
+                        </div>
+                    </div>
+
+                    <NavLink href="/course" class="activity-link">
+                        View in My course
+                        <span>→</span>
+                    </NavLink>
+
+                </div>
+
+            </section>
+        }
+        else
+        {
+            <section class="next-activity-empty">
+                <div class="empty-icon">◷</div>
+
                 <div>
-                    <strong>React application</strong>
-                    <p>Deadline: 2026-10-10</p>
+                    <h2>No upcoming activities</h2>
+                    <p>Your next course activity will appear here.</p>
                 </div>
-                <span>Ej inlämnad</span>
-            </div>
+            </section>
+        }
 
-            <div class="assignment-item">
-                <div>
-                    <strong>Databasdesign</strong>
-                    <p>Deadline: 2026-10-15</p>
+        <div class="dashboard-grid">
+
+            <section class="dashboard-card">
+
+                <div class="dashboard-card-header">
+                    <div class="panel-title">
+                        <span class="panel-icon">☑</span>
+                        <h2>Upcoming assignments</h2>
+                    </div>
+
+                    <NavLink href="/assignments">
+                        All assignments →
+                    </NavLink>
                 </div>
-                <span>Ej inlämnad</span>
-            </div>
-        </section>
 
-        <section class="dashboard-section">
-            <h2>Modulframsteg</h2>
+                @if (dashboard.AssignmentsNeedingAttention.Count == 0)
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">✓</div>
 
-            <div class="progress-item">
-                <span>HTML & CSS</span>
-                <div class="progress">
-                    <div class="progress-bar" style="width: 100%"></div>
+                        <strong>No upcoming assignments</strong>
+
+                        <p>
+                            You're all caught up. New assignments from your teacher
+                            will appear here.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="panel-list">
+
+                        @foreach (var assignment in dashboard.AssignmentsNeedingAttention)
+                        {
+                            <NavLink href="/assignments" class="dashboard-list-item">
+
+                                <div>
+                                    <strong>@assignment.Title</strong>
+
+                                    <p class="assignment-deadline">
+                                        <span>◷</span>
+                                        Due @(assignment.Deadline.ToLocalTime().ToString("dd MMM yyyy"))
+                                    </p>
+                                </div>
+
+                                <span class="status-label">
+                                    @assignment.Status
+                                </span>
+
+                            </NavLink>
+                        }
+
+                    </div>
+                }
+
+            </section>
+
+            <section class="dashboard-card">
+
+                <div class="dashboard-card-header">
+                    <div class="panel-title">
+                        <span class="panel-icon">▤</span>
+                        <h2>Recent documents</h2>
+                    </div>
+
+                    <NavLink href="/course">
+                        Course materials →
+                    </NavLink>
                 </div>
-                <small>100%</small>
-            </div>
 
-            <div class="progress-item">
-                <span>Javascript</span>
-                <div class="progress">
-                    <div class="progress-bar" style="width: 60%"></div>
+                @if (dashboard.RecentDocuments.Count == 0)
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">□</div>
+
+                        <strong>No documents yet</strong>
+
+                        <p>
+                            Materials shared in the course will appear here.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="panel-list">
+
+                        @foreach (var document in dashboard.RecentDocuments)
+                        {
+                            <a href="@document.FilePath"
+                               class="dashboard-list-item document-row">
+
+                                <span class="document-icon">▤</span>
+
+                                <div class="document-copy">
+                                    <strong>@document.FileName</strong>
+
+                                    <p>
+                                        @(document.UploadAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm"))
+                                    </p>
+                                </div>
+
+                                <span class="row-arrow">→</span>
+
+                            </a>
+                        }
+
+                    </div>
+                }
+
+            </section>
+
+        </div>
+
+        <div class="dashboard-grid">
+
+            <section class="dashboard-card">
+
+                <div class="dashboard-card-header">
+                    <div class="panel-title">
+                        <span class="panel-icon">❝</span>
+                        <h2>Recent feedback</h2>
+                    </div>
+
+                    <NavLink href="/assignments">
+                        All assignments →
+                    </NavLink>
                 </div>
-                <small>60%</small>
-            </div>
 
-            <div class="progress-item">
-                <span>React</span>
-                <div class="progress">
-                    <div class="progress-bar" style="width: 20%"></div>
+                @if (dashboard.RecentFeedback.Count == 0)
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">❝</div>
+
+                        <strong>No recent feedback</strong>
+
+                        <p>
+                            Feedback from your teacher will appear here.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var feedback in dashboard.RecentFeedback)
+                    {
+                        <figure class="feedback-item">
+
+                            <blockquote>
+                                “@feedback.Comment”
+                            </blockquote>
+
+                            <figcaption class="feedback-footer">
+
+                                <div>
+                                    <p>Submission #@feedback.SubmissionId</p>
+
+                                    <small>
+                                        @(feedback.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm"))
+                                    </small>
+                                </div>
+
+                                <div class="grade-badge">
+                                    <span>Grade</span>
+                                    <strong>@feedback.Grade</strong>
+                                </div>
+
+                            </figcaption>
+
+                        </figure>
+                    }
+                }
+
+            </section>
+
+            <section class="dashboard-card">
+
+                <div class="dashboard-card-header">
+                    <div class="panel-title">
+                        <span class="panel-icon">♢</span>
+                        <h2>Recent notifications</h2>
+                    </div>
+
+                    <span class="panel-action-muted">
+                        All notifications →
+                    </span>
                 </div>
-                <small>20%</small>
-            </div>
 
-        </section>
+                @if (dashboard.RecentNotifications.Count == 0)
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">♢</div>
 
-    </div>
+                        <strong>No notifications</strong>
+
+                        <p>
+                            Nothing new right now.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="panel-list">
+
+                        @foreach (var notification in dashboard.RecentNotifications)
+                        {
+                            <div class="dashboard-list-item notification-item">
+
+                                <div>
+                                    <strong class="@(notification.IsRead ? "notification-read" : "")">
+                                        @notification.Message
+                                    </strong>
+
+                                    <p>
+                                        @(notification.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm"))
+                                    </p>
+                                </div>
+
+                                <span class="notification-status @(notification.IsRead ? "read" : "new")">
+                                    @(notification.IsRead ? "Read" : "New")
+                                </span>
+
+                            </div>
+                        }
+
+                    </div>
+                }
+
+            </section>
+
+        </div>
+    }
 
 </div>
+
+@code {
+    private DashboardDto? dashboard;
+    private string displayName = "Student";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+        displayName =
+            user.FindFirst(ClaimTypes.Name)?.Value
+            ?? user.FindFirst(ClaimTypes.Email)?.Value?.Split('@')[0]
+            ?? "Student";
+
+        dashboard = await ApiProxyClient.GetAsync<DashboardDto>(
+            "dashboard/student");
+    }
+}

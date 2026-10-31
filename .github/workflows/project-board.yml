@@ -1,0 +1,77 @@
+name: Project board
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened, reopened, ready_for_review, closed]
+    branches: [development, main]
+
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+  GH_REPO: ${{ github.repository }}
+  OWNER: Lexicon-grupp4
+  PROJECT_NUMBER: 1
+  PROJECT_ID: PVT_kwDOFAaqYs4BlLpo
+  STATUS_FIELD_ID: PVTSSF_lADOFAaqYs4BlLpozhj5fGA
+  # Status option IDs (gh project field-list 1 --owner Lexicon-grupp4 --format json)
+  STATUS_BACKLOG: 3428206e
+  STATUS_IN_REVIEW: 943cc278       # In review (development)
+  STATUS_READY_FOR_MAIN: e9032049
+  STATUS_DONE: 91a6fefc
+
+jobs:
+  # New issue → Backlog
+  issue-to-backlog:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_URL: ${{ github.event.issue.html_url }}
+    steps:
+      - run: |
+          item=$(gh project item-add "$PROJECT_NUMBER" --owner "$OWNER" --url "$ISSUE_URL" --format json --jq .id)
+          gh project item-edit --id "$item" --project-id "$PROJECT_ID" \
+            --field-id "$STATUS_FIELD_ID" --single-select-option-id "$STATUS_BACKLOG"
+
+  # PR to development opened → In review (development)
+  # PR to development merged → Ready for main
+  linked-issues:
+    if: >
+      github.event_name == 'pull_request' &&
+      github.base_ref == 'development' &&
+      !github.event.pull_request.draft &&
+      (github.event.action != 'closed' || github.event.pull_request.merged)
+    runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      MERGED: ${{ github.event.pull_request.merged }}
+    steps:
+      - run: |
+          if [ "$MERGED" = "true" ]; then status="$STATUS_READY_FOR_MAIN"; else status="$STATUS_IN_REVIEW"; fi
+          for nr in $(gh pr view "$PR_NUMBER" --json closingIssuesReferences --jq '.closingIssuesReferences[].number'); do
+            item=$(gh project item-add "$PROJECT_NUMBER" --owner "$OWNER" \
+              --url "https://github.com/$GH_REPO/issues/$nr" --format json --jq .id)
+            gh project item-edit --id "$item" --project-id "$PROJECT_ID" \
+              --field-id "$STATUS_FIELD_ID" --single-select-option-id "$status"
+          done
+
+  # Release PR (development → main) merged → all "Ready for main" → Done
+  release-done:
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged &&
+      github.base_ref == 'main' &&
+      github.head_ref == 'development'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          gh project item-list "$PROJECT_NUMBER" --owner "$OWNER" --limit 1000 --format json \
+            --jq '.items[] | select(.status == "Ready for main") | .id' |
+          while read -r item; do
+            gh project item-edit --id "$item" --project-id "$PROJECT_ID" \
+              --field-id "$STATUS_FIELD_ID" --single-select-option-id "$STATUS_DONE"
+          done

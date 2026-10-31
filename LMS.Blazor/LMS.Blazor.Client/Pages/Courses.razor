@@ -1,0 +1,251 @@
+﻿@page "/courses"
+
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.CourseDtos
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject IJSRuntime JS
+
+<PageTitle>Course Management</PageTitle>
+
+<div class="courses-page">
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible" role="alert">
+            <strong>Unable to delete course</strong>
+            <p class="mb-0">@errorMessage</p>
+        </div>
+    }
+    <!-- PAGE HEADER -->
+    <header class="courses-header">
+
+        <div class="courses-header-text">
+            <h1>Course Management</h1>
+            <p>
+                Manage your courses, update course information
+                and create new courses.
+            </p>
+        </div>
+
+        <a href="/course/create" class="courses-create-button">
+            <span aria-hidden="true">+</span>
+            Create New Course
+        </a>
+
+    </header>
+
+    <!-- COURSES CONTENT -->
+    <section class="courses-card">
+
+        <div class="courses-card-header">
+
+            <div>
+                <h2>All Courses</h2>
+
+                @if (courses is not null)
+                {
+                    <p>
+                        @courses.Length courses available
+                    </p>
+                }
+                else
+                {
+                    <p>Loading courses...</p>
+                }
+            </div>
+
+            <span class="courses-header-icon" aria-hidden="true">
+                ▤
+            </span>
+
+        </div>
+
+        @if (courses is null)
+        {
+            <div class="courses-empty-state">
+
+                <span aria-hidden="true">◷</span>
+
+                <strong>Loading courses...</strong>
+
+                <p>Please wait while we load your courses.</p>
+
+            </div>
+        }
+        else if (courses.Length == 0)
+        {
+            <div class="courses-empty-state">
+
+                <span aria-hidden="true">▤</span>
+
+                <strong>No courses yet</strong>
+
+                <p>
+                    Create your first course to get started.
+                </p>
+
+                <a href="/course/create" class="courses-create-button">
+                    Create New Course
+                </a>
+
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive courses-table-wrapper">
+
+                <table class="courses-table">
+
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Code</th>
+                            <th>ID</th>
+                            <th>Description</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th class="courses-actions-heading">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var c in courses)
+                        {
+                            <tr>
+
+                                <!-- COURSE NAME -->
+                                <td>
+                                    <a class="courses-name-link" href="@($"/course/{c.Id}")">
+
+                                        <span class="courses-name-icon" aria-hidden="true">
+                                            ▤
+                                        </span>
+
+                                        <span>@c.Name</span>
+
+                                    </a>
+                                </td>
+
+                                <!-- COURSE CODE -->
+                                <td>
+                                    <span class="courses-code">
+                                        @c.Code
+                                    </span>
+                                </td>
+
+                                <!-- COURSE ID -->
+                                <td class="courses-id">
+                                    @c.Id
+                                </td>
+
+                                <!-- DESCRIPTION -->
+                                <td class="courses-description">
+                                    @c.Description
+                                </td>
+
+                                <!-- START DATE -->
+                                <td class="courses-date">
+                                    @c.StartDate.ToShortDateString()
+                                </td>
+
+                                <!-- END DATE -->
+                                <td class="courses-date">
+                                    @c.EndDate.ToShortDateString()
+                                </td>
+
+                                <!-- ACTIONS -->
+                                <td>
+                                    <div class="courses-actions">
+
+                                        <!-- EDIT -->
+                                        <a class="courses-edit-button" href="@($"/course/edit/{c.Id}")">
+                                            Edit
+                                        </a>
+
+                                        <!-- VIEW MODULES -->
+                                        <a class="courses-view-modules-button"
+                                           href="@($"/courses/{c.Id}/modules")">
+                                            View Modules
+                                        </a>
+
+                                        <!-- DELETE -->
+                                        <button type="button" class="courses-delete-button"
+                                                disabled="@deletingIds.Contains(c.Id)" @onclick="() => DeleteCourseAsync(c.Id)">
+
+                                            @(deletingIds.Contains(c.Id)
+                                                ? "Deleting..."
+                                                : "Delete")
+
+                                        </button>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+        }
+
+    </section>
+
+</div>
+
+@code {
+    private CourseDto[]? courses;
+    private readonly HashSet<int> deletingIds = new();
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCoursesAsync();
+    }
+
+    private async Task LoadCoursesAsync()
+    {
+        courses = await ApiProxyClient.GetAsync<CourseDto[]>("courses");
+    }
+
+    private async Task DeleteCourseAsync(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>(
+        "confirm",
+        $"Delete course #{id}?");
+                                                                                        
+        if (!confirmed)
+            return;
+                                                                                        
+        errorMessage = string.Empty;
+        deletingIds.Add(id);
+        StateHasChanged();
+                                                                                        
+        try
+        {
+            await ApiProxyClient.DeleteAsync($"courses/{id}");
+            await LoadCoursesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = await GetDeleteErrorMessageAsync(ex);
+        }
+        finally
+        {
+            deletingIds.Remove(id);
+        }
+    }
+
+    private async Task<string> GetDeleteErrorMessageAsync(Exception ex)
+    {
+        return "Unable to delete the course. It may have associated students or documents. Please remove those associations before trying again.";
+    }
+}

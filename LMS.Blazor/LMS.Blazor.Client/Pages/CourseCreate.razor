@@ -1,0 +1,95 @@
+﻿@page "/course/create"
+
+@using LMS.Blazor.Client.Components
+@using LMS.Blazor.Client.Models
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.CourseDtos
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create Course</PageTitle>
+
+<div class="course-create-page">
+
+    <!-- PAGE HEADER -->
+    <header class="course-create-header">
+        <div class="course-create-header-text">
+            <h1>Create Course</h1>
+            <p>Add a new course and manage its information and schedule.</p>
+        </div>
+    </header>
+
+    <!-- MAIN CARD -->
+    <section class="course-create-card">
+
+        <!-- CARD HEADER -->
+        <div class="course-create-card-header">
+            <div>
+                <h2>Course Information</h2>
+                <p>Enter the details for the new course below.</p>
+            </div>
+
+            <span class="course-create-header-icon bi bi-journal-plus" aria-hidden="true"></span>
+        </div>
+
+        <!-- ERROR MESSAGE -->
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="course-create-error" role="alert">
+                <span class="bi bi-exclamation-circle" aria-hidden="true"></span>
+
+                <span>@errorMessage</span>
+            </div>
+        }
+
+        <!-- COURSE FORM -->
+        <div class="course-create-form">
+
+            <CourseForm Model="model" OnValidSubmit="HandleValidSubmit" IsSubmitting="isSubmitting"
+                        SubmitButtonText="Create" />
+
+        </div>
+
+    </section>
+
+</div>
+
+@code {
+    private CourseFormModel model = new();
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var dto = new NewCourseDto(
+                model.Name,
+                model.Code,
+                model.Description,
+                model.StartDate,
+                model.EndDate);
+
+            await ApiProxyClient.PostAsync<NewCourseDto, CourseDto>(
+                "courses",
+                dto);
+
+            NavigationManager.NavigateTo("/courses");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not create the course: " + ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

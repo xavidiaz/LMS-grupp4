@@ -1,0 +1,43 @@
+﻿<div class="content-state @StateClass" role="@Role" aria-live="polite">
+
+    @if (Type == "loading")
+    {
+        <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+        <span>@DisplayMessage</span>
+    }
+    else if (Type == "error")
+    {
+        <strong>Något gick fel</strong>
+        <span>@DisplayMessage</span>
+    }
+    else
+    {
+        <strong>Ingen information att visa</strong>
+        <span>@DisplayMessage</span>
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    public string Type { get; set; } = "empty";
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    private string StateClass => Type switch
+    {
+        "loading" => "content-state-loading",
+        "error" => "content-state-error",
+        _ => "content-state-empty"
+    };
+
+    private string Role => Type == "error" ? "alert" : "status";
+
+    private string DisplayMessage => Message ?? Type switch
+    {
+        "loading" => "Laddar innehåll...",
+        "error" => "Försök igen senare.",
+        _ => "Det finns inget innehåll här ännu."
+    };
+}

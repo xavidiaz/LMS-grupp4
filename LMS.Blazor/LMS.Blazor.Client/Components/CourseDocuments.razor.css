@@ -1,0 +1,68 @@
+.documents-card {
+    margin-top: 1.35rem;
+    padding: 1.45rem 1.5rem;
+    background: #ffffff;
+    border: 1px solid #dce3de;
+    border-radius: 16px;
+    box-shadow: 0 3px 14px rgba(24, 54, 37, 0.04);
+}
+
+.documents-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #edf0ee;
+}
+
+.panel-title { display: flex; align-items: center; gap: 0.65rem; }
+.panel-title h2 { margin: 0; color: #243029; font-size: 1rem; font-weight: 650; }
+.panel-icon { color: #315a42; font-size: 0.95rem; }
+.document-count { color: #7b847f; font-size: 0.82rem; font-weight: 600; }
+
+.upload-area {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0 0.5rem;
+    padding: 0.9rem 1.1rem;
+    background: #f8faf9;
+    border: 1px dashed #c9d3cc;
+    border-radius: 10px;
+    color: #657069;
+    font-size: 0.85rem;
+}
+
+.upload-area ::deep input[type=file] { font-size: 0.85rem; }
+
+.doc-message { margin: 1rem 0 0; padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.86rem; }
+.doc-message.success { background: #eaf4ed; color: #24613c; }
+.doc-message.error { background: #fdecec; color: #a12c2c; }
+
+.document-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 0.25rem;
+    border-bottom: 1px solid #edf0ee;
+}
+.document-item:last-child { border-bottom: 0; }
+
+.document-item a { color: #26332b; font-size: 0.92rem; font-weight: 650; text-decoration: none; }
+.document-item a:hover { color: #173d2a; text-decoration: underline; }
+.document-item p { margin: 0.3rem 0 0; color: #6d7871; font-size: 0.83rem; }
+
+.delete-button {
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid #ecc9c9;
+    border-radius: 8px;
+    background: transparent;
+    color: #a12c2c;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.delete-button:hover { background: #fdecec; }
+
+.empty-state { padding: 2rem 1rem; text-align: center; color: #7b847f; font-size: 0.86rem; }

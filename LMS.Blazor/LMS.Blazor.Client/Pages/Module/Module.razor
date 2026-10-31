@@ -1,0 +1,133 @@
+﻿@page "/modules/{Id:int}"
+
+@using LMS.Blazor.Client.Components
+@using LMS.Shared.DTOs.Module
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Student,Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Module</PageTitle>
+
+<h3 class="mb-4">Module</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage) && module is null)
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+else if (module is not null)
+{
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td>Course ID</td>
+                            <td>@module.CourseId</td>
+                        </tr>
+                        <tr>
+                            <td>Module Name</td>
+                            <td>@module.Name</td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td>@module.Description</td>
+                        </tr>
+
+                        <tr>
+                            <td>Start Date</td>
+                            <td>@module.StartDate.ToString("yyyy-MM-dd")</td>
+                        </tr>
+                        <tr>
+                            <td>End Date</td>
+                            <td>@module.EndDate.ToString("yyyy-MM-dd")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <CourseDocuments Id="Id" Type="module"></CourseDocuments>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private UpdateModuleDto? module;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadModule();
+    }
+
+    private async Task LoadModule()
+    {
+        isLoading = true;
+        errorMessage = null;
+        module = null;
+
+        try
+        {
+            var existing =
+                await ApiProxyClient.GetAsync<ModuleDto>(
+                    $"Module/{Id}");
+
+            if (existing is null)
+            {
+                errorMessage = "Module not found.";
+                return;
+            }
+
+            module = new UpdateModuleDto
+            {
+                CourseId = existing.CourseId,
+                Name = existing.Name,
+                Description = existing.Description,
+                StartDate = existing.StartDate,
+                EndDate = existing.EndDate
+            };
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

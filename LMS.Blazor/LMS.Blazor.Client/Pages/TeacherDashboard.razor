@@ -1,0 +1,768 @@
+﻿
+@page "/teacher-dashboard"
+
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.DashboardDtos
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Teacher Dashboard</PageTitle>
+
+<div class="teacher-dashboard">
+
+    <!-- WELCOME HEADER -->
+
+    <header class="dashboard-welcome">
+
+        <div class="welcome-copy">
+            <h1>Hi @displayName</h1>
+            <p>
+                Welcome back. Here's what needs your attention
+                across your courses.
+            </p>
+        </div>
+
+        <div class="teacher-mode-switch">
+
+            <button type="button"
+                    class="@(!isDemoMode ? "active" : "")"
+                    aria-pressed="@(!isDemoMode)"
+                    @onclick="() => isDemoMode = false">
+                Live Mode
+            </button>
+
+            <button type="button"
+                    class="@(isDemoMode ? "active" : "")"
+                    aria-pressed="@isDemoMode"
+                    @onclick="() => isDemoMode = true">
+                Demo Mode
+            </button>
+
+        </div>
+
+    </header>
+
+    @if (isDemoMode)
+    {
+        <div class="teacher-demo-notice">
+            <span aria-hidden="true">ⓘ</span>
+            Demo Mode is active. All information shown below
+            is example data.
+        </div>
+    }
+
+    @if (isLoading && !isDemoMode)
+    {
+        <div class="dashboard-loading">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">
+                    Loading dashboard...
+                </span>
+            </div>
+            <p>Loading dashboard...</p>
+        </div>
+    }
+    else if (dashboard is null)
+    {
+        <section class="dashboard-card">
+            <div class="empty-state">
+                <span class="empty-icon">!</span>
+                <strong>Dashboard unavailable</strong>
+                <p>@errorMessage</p>
+            </div>
+        </section>
+    }
+    else
+    {
+        <!-- FOUR CLICKABLE STATISTICS CARDS -->
+
+        <section class="teacher-summary-grid"
+                 aria-label="Dashboard overview">
+
+            <!-- CURRENT COURSES -->
+
+            <a href="#teacher-courses"
+               class="teacher-summary-card summary-courses">
+
+                <span class="teacher-summary-icon"
+                      aria-hidden="true">
+                    ▤
+                </span>
+
+                <div class="teacher-summary-content">
+                    <span class="teacher-summary-label">
+                        Current Courses
+                    </span>
+
+                    <strong>
+                        @dashboard.CurrentCourses.Count
+                    </strong>
+
+                    <span class="teacher-summary-description">
+                        Active courses
+                    </span>
+                </div>
+
+                <span class="teacher-summary-arrow"
+                      aria-hidden="true">
+                    →
+                </span>
+
+            </a>
+
+            <!-- UPCOMING ACTIVITIES -->
+
+            <a href="#teacher-activities"
+               class="teacher-summary-card summary-activities">
+
+                <span class="teacher-summary-icon"
+                      aria-hidden="true">
+                    ◷
+                </span>
+
+                <div class="teacher-summary-content">
+                    <span class="teacher-summary-label">
+                        Upcoming Activities
+                    </span>
+
+                    <strong>
+                        @dashboard.UpcomingActivities.Count
+                    </strong>
+
+                    <span class="teacher-summary-description">
+                        Next scheduled activities
+                    </span>
+                </div>
+
+                <span class="teacher-summary-arrow"
+                      aria-hidden="true">
+                    →
+                </span>
+
+            </a>
+
+            <!-- SUBMISSIONS -->
+
+            <a href="#teacher-submissions"
+               class="teacher-summary-card summary-submissions">
+
+                <span class="teacher-summary-icon"
+                      aria-hidden="true">
+                    ▣
+                </span>
+
+                <div class="teacher-summary-content">
+                    <span class="teacher-summary-label">
+                        Submissions
+                    </span>
+
+                    <strong>
+                        @dashboard.SubmissionsNeedingAttention.Count
+                    </strong>
+
+                    <span class="teacher-summary-description">
+                        Need attention
+                    </span>
+                </div>
+
+                <span class="teacher-summary-arrow"
+                      aria-hidden="true">
+                    →
+                </span>
+
+            </a>
+
+            <!-- PENDING FEEDBACK -->
+
+            <a href="#teacher-feedback"
+               class="teacher-summary-card summary-feedback">
+
+                <span class="teacher-summary-icon"
+                      aria-hidden="true">
+                    ◉
+                </span>
+
+                <div class="teacher-summary-content">
+                    <span class="teacher-summary-label">
+                        Pending Feedback
+                    </span>
+
+                    <strong>
+                        @dashboard.PendingFeedback.Count
+                    </strong>
+
+                    <span class="teacher-summary-description">
+                        Waiting for review
+                    </span>
+                </div>
+
+                <span class="teacher-summary-arrow"
+                      aria-hidden="true">
+                    →
+                </span>
+
+            </a>
+
+        </section>
+
+        <!-- ROW 1: COURSES AND ACTIVITIES -->
+
+        <div class="dashboard-grid">
+
+            <!-- CURRENT COURSES -->
+
+            <section class="dashboard-card"
+                     id="teacher-courses">
+
+                <div class="dashboard-card-header">
+
+                    <div class="panel-title">
+                        <span class="panel-icon panel-icon-courses"
+                              aria-hidden="true">
+                            ▤
+                        </span>
+
+                        <h2>Current Courses</h2>
+                    </div>
+
+                    <NavLink href="/courses"
+                             class="dashboard-header-link">
+                        All courses →
+                    </NavLink>
+
+                </div>
+
+                @if (dashboard.CurrentCourses.Count == 0)
+                {
+                    <div class="empty-state">
+                        <span class="empty-icon">✓</span>
+                        <strong>No active courses</strong>
+                        <p>
+                            Current courses will appear here.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="panel-list">
+
+                        @foreach (var course in dashboard.CurrentCourses)
+                        {
+                            <NavLink href="@($"/course/{course.CourseId}")"
+                                     class="dashboard-list-item">
+
+                                <span class="dashboard-row-icon"
+                                      aria-hidden="true">
+                                    ▤
+                                </span>
+
+                                <div class="dashboard-row-content">
+
+                                    <strong>@course.Name</strong>
+
+                                    <p>
+                                        @course.StudentCount students
+                                        ·
+                                        @course.ModuleCount modules
+                                    </p>
+
+                                    <p>
+                                        @course.StartDate.ToString("dd MMM yyyy")
+                                        –
+                                        @course.EndDate.ToString("dd MMM yyyy")
+                                    </p>
+
+                                </div>
+
+                                <span class="row-arrow"
+                                      aria-hidden="true">
+                                    →
+                                </span>
+
+                            </NavLink>
+                        }
+
+                    </div>
+                }
+
+            </section>
+
+            <!-- UPCOMING ACTIVITIES -->
+
+            <section class="dashboard-card"
+                     id="teacher-activities">
+
+                <div class="dashboard-card-header">
+
+                    <div class="panel-title">
+                        <span class="panel-icon panel-icon-activities"
+                              aria-hidden="true">
+                            ◷
+                        </span>
+
+                        <h2>Upcoming Activities</h2>
+                    </div>
+
+                </div>
+
+                @if (dashboard.UpcomingActivities.Count == 0)
+                {
+                    <div class="empty-state">
+                        <span class="empty-icon">✓</span>
+                        <strong>No upcoming activities</strong>
+                        <p>
+                            Upcoming course activities will
+                            appear here.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="panel-list">
+
+                        @foreach (var activity in dashboard.UpcomingActivities)
+                        {
+                            <NavLink href="@($"/course/{activity.CourseId}")"
+                                     class="dashboard-list-item">
+
+                                <span class="dashboard-row-icon"
+                                      aria-hidden="true">
+                                    ▣
+                                </span>
+
+                                <div class="dashboard-row-content">
+
+                                    <strong>@activity.Title</strong>
+
+                                    <p>
+                                        @activity.CourseName
+                                        ·
+                                        @activity.ActivityType
+                                    </p>
+
+                                    <p class="assignment-deadline">
+                                        Due
+                                        @activity.EndDate.ToString("dd MMM yyyy")
+                                    </p>
+
+                                </div>
+
+                                <span class="row-arrow"
+                                      aria-hidden="true">
+                                    →
+                                </span>
+
+                            </NavLink>
+                        }
+
+                    </div>
+                }
+
+            </section>
+
+        </div>
+
+        <!-- ROW 2: SUBMISSIONS AND FEEDBACK -->
+
+        <div class="dashboard-grid">
+
+            <!-- SUBMISSIONS -->
+
+            <section class="dashboard-card"
+                     id="teacher-submissions">
+
+                <div class="dashboard-card-header">
+
+                    <div class="panel-title">
+                        <span class="panel-icon panel-icon-submissions"
+                              aria-hidden="true">
+                            ▣
+                        </span>
+
+                        <h2>Submissions Needing Attention</h2>
+                    </div>
+
+                </div>
+
+                @if (dashboard.SubmissionsNeedingAttention.Count == 0)
+                {
+                    <div class="empty-state">
+                        <span class="empty-icon">✓</span>
+                        <strong>All caught up</strong>
+                        <p>
+                            No submissions currently need attention.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="panel-list">
+
+                        @foreach (var submission in dashboard.SubmissionsNeedingAttention)
+                        {
+                            <NavLink href="@($"/course/{submission.CourseId}")"
+                                     class="dashboard-list-item">
+
+                                <span class="dashboard-row-icon"
+                                      aria-hidden="true">
+                                    ▣
+                                </span>
+
+                                <div class="dashboard-row-content">
+
+                                    <strong>@submission.StudentName</strong>
+
+                                    <p>
+                                        @submission.AssignmentTitle
+                                    </p>
+
+                                    <p class="assignment-deadline">
+                                        Deadline:
+                                        @submission.Deadline.ToString("dd MMM yyyy")
+                                    </p>
+
+                                </div>
+
+                                <span class="status-label @GetStatusClass(submission.Status)">
+                                    @submission.Status
+                                </span>
+
+                                <span class="row-arrow"
+                                      aria-hidden="true">
+                                    →
+                                </span>
+
+                            </NavLink>
+                        }
+
+                    </div>
+                }
+
+            </section>
+
+            <!-- PENDING FEEDBACK -->
+
+            <section class="dashboard-card"
+                     id="teacher-feedback">
+
+                <div class="dashboard-card-header">
+
+                    <div class="panel-title">
+                        <span class="panel-icon panel-icon-feedback"
+                              aria-hidden="true">
+                            ◉
+                        </span>
+
+                        <h2>Pending Feedback</h2>
+                    </div>
+
+                </div>
+
+                @if (dashboard.PendingFeedback.Count == 0)
+                {
+                    <div class="empty-state">
+                        <span class="empty-icon">✓</span>
+                        <strong>No pending feedback</strong>
+                        <p>
+                            All received submissions have been reviewed.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="panel-list">
+
+                        @foreach (var feedback in dashboard.PendingFeedback)
+                        {
+                            <NavLink href="@($"/course/{feedback.CourseId}")"
+                                     class="dashboard-list-item">
+
+                                <span class="dashboard-row-icon"
+                                      aria-hidden="true">
+                                    ◉
+                                </span>
+
+                                <div class="dashboard-row-content">
+
+                                    <strong>@feedback.StudentName</strong>
+
+                                    <p>
+                                        @feedback.AssignmentTitle
+                                    </p>
+
+                                    <p>
+                                        Submitted:
+                                        @feedback.SubmittedAt.ToString("dd MMM yyyy")
+                                    </p>
+
+                                </div>
+
+                                <span class="row-arrow"
+                                      aria-hidden="true">
+                                    →
+                                </span>
+
+                            </NavLink>
+                        }
+
+                    </div>
+                }
+
+            </section>
+
+        </div>
+
+        <!-- RECENT ACTIVITY -->
+
+        <section class="dashboard-card teacher-recent-card"
+                 id="teacher-recent">
+
+            <div class="dashboard-card-header">
+
+                <div class="panel-title">
+                    <span class="panel-icon panel-icon-recent"
+                          aria-hidden="true">
+                        ◷
+                    </span>
+
+                    <h2>Recent Activity</h2>
+                </div>
+
+            </div>
+
+            @if (dashboard.RecentActivities.Count == 0)
+            {
+                <div class="empty-state">
+                    <span class="empty-icon">◷</span>
+                    <strong>No recent activity</strong>
+                    <p>
+                        Recent submissions will appear here.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="panel-list">
+
+                    @foreach (var activity in dashboard.RecentActivities)
+                    {
+                        <NavLink href="@($"/course/{activity.CourseId}")"
+                                 class="dashboard-list-item">
+
+                            <span class="dashboard-row-icon"
+                                  aria-hidden="true">
+                                ◷
+                            </span>
+
+                            <div class="dashboard-row-content">
+
+                                <strong>@activity.Description</strong>
+
+                                <p>
+                                    @activity.ActivityType
+                                    ·
+                                    @activity.CreatedAt.ToString("dd MMM yyyy, HH:mm")
+                                </p>
+
+                            </div>
+
+                            <span class="row-arrow"
+                                  aria-hidden="true">
+                                →
+                            </span>
+
+                        </NavLink>
+                    }
+
+                </div>
+            }
+
+        </section>
+    }
+
+</div>
+
+@code {
+
+    private TeacherDashboardDto? liveDashboard;
+
+    private bool isLoading = true;
+    private bool isDemoMode;
+
+    private string displayName = "Teacher";
+
+    private string errorMessage =
+        "Could not load your dashboard. Please try again later.";
+
+    private TeacherDashboardDto? dashboard =>
+        isDemoMode ? demoDashboard : liveDashboard;
+
+    private readonly TeacherDashboardDto demoDashboard =
+        CreateDemoDashboard();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+        displayName =
+            user.FindFirst(ClaimTypes.Name)?.Value
+            ?? user.FindFirst(ClaimTypes.Email)?.Value?.Split('@')[0]
+            ?? "Teacher";
+
+        try
+        {
+            liveDashboard =
+                await ApiProxyClient.GetAsync<TeacherDashboardDto>(
+                    "dashboard/teacher");
+        }
+        catch (Exception)
+        {
+            errorMessage =
+                "The teacher dashboard could not be loaded.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "New" => "status-new",
+            "Late" => "status-late",
+            "Missing" => "status-missing",
+            _ => ""
+        };
+    }
+
+    private static TeacherDashboardDto CreateDemoDashboard()
+    {
+        var today = DateTime.Today;
+
+        return new TeacherDashboardDto
+        {
+            CurrentCourses =
+            [
+                new TeacherCourseDto
+                {
+                    CourseId = 4,
+                    Name = "Course A",
+                    StartDate = today.AddDays(-30),
+                    EndDate = today.AddDays(90),
+                    StudentCount = 5,
+                    ModuleCount = 3
+                },
+                new TeacherCourseDto
+                {
+                    CourseId = 6,
+                    Name = "Course C",
+                    StartDate = today.AddDays(-20),
+                    EndDate = today.AddDays(100),
+                    StudentCount = 2,
+                    ModuleCount = 3
+                }
+            ],
+
+            UpcomingActivities =
+            [
+                new TeacherActivityDto
+                {
+                    ActivityId = 5,
+                    CourseId = 4,
+                    CourseName = "Course A",
+                    Title = "C# Basics - Assignment",
+                    ActivityType = "Assignment",
+                    StartDate = today,
+                    EndDate = today.AddDays(7)
+                },
+                new TeacherActivityDto
+                {
+                    ActivityId = 33,
+                    CourseId = 6,
+                    CourseName = "Course C",
+                    Title = "Git & GitHub - Assignment",
+                    ActivityType = "Assignment",
+                    StartDate = today.AddDays(1),
+                    EndDate = today.AddDays(10)
+                }
+            ],
+
+            SubmissionsNeedingAttention =
+            [
+                new TeacherSubmissionDto
+                {
+                    SubmissionId = 11,
+                    ActivityId = 5,
+                    CourseId = 4,
+                    StudentName = "Erik Johansson",
+                    AssignmentTitle = "C# Basics - Assignment",
+                    Deadline = today.AddDays(7),
+                    Status = "New"
+                },
+                new TeacherSubmissionDto
+                {
+                    SubmissionId = 12,
+                    ActivityId = 37,
+                    CourseId = 6,
+                    StudentName = "David Lind",
+                    AssignmentTitle = "Azure - Assignment",
+                    Deadline = today.AddDays(-3),
+                    Status = "Late"
+                },
+                new TeacherSubmissionDto
+                {
+                    SubmissionId = null,
+                    ActivityId = 33,
+                    CourseId = 6,
+                    StudentName = "Maria Garcia",
+                    AssignmentTitle = "Git & GitHub - Assignment",
+                    Deadline = today.AddDays(-5),
+                    Status = "Missing"
+                }
+            ],
+
+            PendingFeedback =
+            [
+                new TeacherPendingFeedbackDto
+                {
+                    SubmissionId = 11,
+                    CourseId = 4,
+                    StudentName = "Erik Johansson",
+                    AssignmentTitle = "C# Basics - Assignment",
+                    SubmittedAt = today.AddDays(-1)
+                }
+            ],
+
+            RecentActivities =
+            [
+                new TeacherRecentActivityDto
+                {
+                    CourseId = 4,
+                    Description =
+                        "Submission received: C# Basics - Assignment",
+                    ActivityType = "Submission",
+                    CreatedAt = today.AddDays(-1)
+                },
+                new TeacherRecentActivityDto
+                {
+                    CourseId = 6,
+                    Description =
+                        "Late submission received: Azure - Assignment",
+                    ActivityType = "Submission",
+                    CreatedAt = today.AddDays(-2)
+                }
+            ]
+        };
+    }
+}

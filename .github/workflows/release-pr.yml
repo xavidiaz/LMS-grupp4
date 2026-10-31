@@ -1,0 +1,26 @@
+name: Release PR
+
+on:
+  push:
+    branches: [development]
+
+concurrency: release-pr
+
+permissions:
+  contents: read
+
+jobs:
+  # Keep one open PR development → main. New merges to development show up in it automatically.
+  release-pr:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - run: |
+          open=$(gh pr list --base main --head development --state open --json number --jq length)
+          if [ "$open" -eq 0 ]; then
+            gh pr create --base main --head development \
+              --title "Release: development → main" \
+              --body "Created automatically. Contains everything merged to development since the last release. Merging deploys to Azure and moves all 'Ready for main' items to Done."
+          fi

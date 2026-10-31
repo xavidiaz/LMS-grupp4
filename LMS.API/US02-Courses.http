@@ -1,0 +1,247 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Courses – user story US02
+# Run top to bottom.
+# Creates one course and one user, and deletes both at the end.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 3. Student 2 (Course B) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student2@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("student2Token", response.body.accessToken);
+%}
+
+### 4. Student reads own course (200)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.global.set("courseA", response.body.id);
+%}
+
+### 5. Student 2 reads own course (200)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{student2Token}}
+
+> {%
+  client.global.set("courseB", response.body.id);
+%}
+
+# --- Create course ---
+
+### 6. Teacher creates a course (200)
+POST {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP test course",
+  "code": "HTTP-TEST",
+  "description": "Created by a .http file. Deleted at the end.",
+  "startDate": "2030-01-01T00:00:00",
+  "endDate": "2030-12-31T00:00:00"
+}
+
+> {%
+  client.global.set("courseId", response.body.id);
+%}
+
+### 7. Empty name (400)
+POST {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "name": "",
+  "code": "HTTP-TEST",
+  "description": "Created by a .http file. Deleted at the end.",
+  "startDate": "2030-01-01T00:00:00",
+  "endDate": "2030-12-31T00:00:00"
+}
+
+### 8. End date before start date (400)
+POST {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP test course",
+  "code": "HTTP-TEST",
+  "description": "Created by a .http file. Deleted at the end.",
+  "startDate": "2030-12-31T00:00:00",
+  "endDate": "2030-01-01T00:00:00"
+}
+
+### 9. Student creates a course (403)
+POST {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP test course",
+  "code": "HTTP-TEST",
+  "description": "Created by a .http file. Deleted at the end.",
+  "startDate": "2030-01-01T00:00:00",
+  "endDate": "2030-12-31T00:00:00"
+}
+
+### 10. No token (401)
+POST {{LMS.API_HostAddress}}/api/courses
+Content-Type: application/json
+
+{
+  "name": "HTTP test course",
+  "code": "HTTP-TEST",
+  "description": "Created by a .http file. Deleted at the end.",
+  "startDate": "2030-01-01T00:00:00",
+  "endDate": "2030-12-31T00:00:00"
+}
+
+# --- Read courses ---
+
+### 11. Teacher lists courses (200)
+GET {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+
+### 12. Student lists courses (403)
+GET {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{studentToken}}
+
+### 13. No token (401)
+GET {{LMS.API_HostAddress}}/api/courses
+
+### 14. Teacher reads a course (200)
+GET {{LMS.API_HostAddress}}/api/courses/{{courseId}}
+Authorization: Bearer {{teacherToken}}
+
+### 15. Course does not exist (404)
+GET {{LMS.API_HostAddress}}/api/courses/999999
+Authorization: Bearer {{teacherToken}}
+
+### 16. Student reads own course by id (200)
+GET {{LMS.API_HostAddress}}/api/courses/{{courseA}}
+Authorization: Bearer {{studentToken}}
+
+### 17. Student reads another course (403)
+GET {{LMS.API_HostAddress}}/api/courses/{{courseB}}
+Authorization: Bearer {{studentToken}}
+
+# --- Update course ---
+
+### 18. Teacher updates the description only (200)
+PATCH {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "id": {{courseId}},
+  "description": "Updated description."
+}
+
+### 19. Course does not exist (404)
+PATCH {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "id": 999999,
+  "description": "Nobody"
+}
+
+### 20. End date before start date (400)
+PATCH {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "id": {{courseId}},
+  "startDate": "2031-01-01T00:00:00",
+  "endDate": "2030-01-01T00:00:00"
+}
+
+### 21. Student updates a course (403)
+PATCH {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "id": {{courseId}},
+  "name": "Hacked"
+}
+
+# --- Delete course ---
+
+### 22. Teacher adds a student to the course (201)
+POST {{LMS.API_HostAddress}}/api/users
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Http",
+  "lastName": "Course",
+  "email": "http.course@lms.com",
+  "role": "Student",
+  "courseId": {{courseId}}
+}
+
+> {%
+  client.global.set("userId", response.body.user.id);
+%}
+
+### 23. Delete a course with students (409)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{courseId}}
+Authorization: Bearer {{teacherToken}}
+
+### 24. Teacher removes the student (204)
+DELETE {{LMS.API_HostAddress}}/api/users/{{userId}}
+Authorization: Bearer {{teacherToken}}
+
+### 25. Student deletes the course (403)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{courseId}}
+Authorization: Bearer {{studentToken}}
+
+### 26. Teacher deletes the empty course (200)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{courseId}}
+Authorization: Bearer {{teacherToken}}
+
+### 27. Delete the same course again (404)
+DELETE {{LMS.API_HostAddress}}/api/courses/{{courseId}}
+Authorization: Bearer {{teacherToken}}

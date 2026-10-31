@@ -2,10 +2,12 @@ using LMS.API.Extensions;
 using LMS.API.Services;
 using LMS.Infrastructure.Data;
 using LMS.Presentation;
+using LMS.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-internal class Program
+using System.Reflection;
+public class Program
 {
     private static void Main(string[] args)
     {
@@ -22,13 +24,17 @@ internal class Program
         .AddApplicationPart(typeof(AssemblyReference).Assembly);
 
         builder.Services.AddHostedService<DataSeedService>();
+
+        builder.Services.AddAutoMapper(cfg => { }, typeof(MapperProfile));
+
         builder.Services.ConfigureSwagger();
         builder.Services.AddRepositories();
         builder.Services.AddServiceLayer();
         builder.Services.ConfigureAuthentication(builder.Configuration);
         builder.Services.ConfigureIdentity();
         builder.Services.ConfigurePolicys();
-
+        builder.Services.AddScoped<ICourseService, CourseService>();
+        builder.Services.AddScoped<IDashboardService, DashboardService>();
         var app = builder.Build();
 
         app.ConfigureExceptionHandler();

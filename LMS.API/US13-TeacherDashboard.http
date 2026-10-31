@@ -1,0 +1,47 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Teacher dashboard – user story US13
+# Run top to bottom.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Student logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 3. Teacher reads the dashboard (200)
+GET {{LMS.API_HostAddress}}/api/dashboard/teacher
+Authorization: Bearer {{teacherToken}}
+
+### 4. Student reads the teacher dashboard (403)
+GET {{LMS.API_HostAddress}}/api/dashboard/teacher
+Authorization: Bearer {{studentToken}}
+
+### 5. No token (401)
+GET {{LMS.API_HostAddress}}/api/dashboard/teacher

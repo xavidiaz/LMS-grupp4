@@ -15,4 +15,5 @@
     <Project Path="LMS.Blazor/LMS.Blazor.Client/LMS.Blazor.Client.csproj" Id="55f09990-8f15-4eda-ac6e-2f9771ab1e58" />
     <Project Path="LMS.Blazor/LMS.Blazor/LMS.Blazor.csproj" Id="e2cec9bb-ac1a-472a-84c8-d9ec66b988bb" />
   </Folder>
+  <Project Path="LMS.API.Tests/LMS.API.Tests.csproj" />
 </Solution>

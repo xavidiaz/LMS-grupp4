@@ -1,0 +1,339 @@
+﻿@page "/teacher/submissions"
+
+@using LMS.Blazor.Client.Components
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.SubmissionDtos
+@using LMS.Shared.Paging
+@using Microsoft.AspNetCore.Authorization
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Teacher")]
+
+<PageTitle>Student Submissions</PageTitle>
+
+<div class="teacher-submissions-page">
+
+    <PageHeader Title="Student Submissions"
+                Description="Monitor student submissions, deadlines, and missing work." />
+
+    <div class="submission-filters">
+
+        <div class="filter-field">
+            <label for="activity">Assignment</label>
+            <select id="activity"
+                    @bind="selectedActivityId">
+                <option value="">All assignments</option>
+                @foreach (var activity in activities)
+                {
+                    <option value="@activity.ActivityId">
+                        @activity.ActivityTitle
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="status">Submission status</label>
+            <select id="status" @bind="selectedStatus">
+                <option value="">All statuses</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Late">Late</option>
+                <option value="Missing">Missing</option>
+                <option value="Overdue">Overdue</option>
+            </select>
+        </div>
+
+        <button class="submission-button"
+                @onclick="ApplyFiltersAsync"
+                disabled="@isLoading">
+            Apply filters
+        </button>
+
+        <button class="submission-button secondary"
+                @onclick="ClearFiltersAsync"
+                disabled="@isLoading">
+            Clear
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <ContentState Type="loading" />
+    }
+    else if (hasError)
+    {
+        <ContentState Type="error"
+                      Message="@errorMessage" />
+
+        <button class="submission-button"
+                @onclick="LoadSubmissionsAsync">
+            Try again
+        </button>
+    }
+
+    else if (submissions.Count == 0)
+    {
+        <ContentState Type="empty"
+                      Message="No records match your filters." />
+    }
+    else
+    {
+        <div class="submission-summary">
+            <div class="summary-card">
+                <span>Total records</span>
+                <strong>@totalCount</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>Submitted</span>
+                <strong>@CountStatus("Submitted")</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>Late</span>
+                <strong>@CountStatus("Late")</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>Missing / overdue</span>
+                <strong>@(CountStatus("Missing") + CountStatus("Overdue"))</strong>
+            </div>
+        </div>
+
+        <div class="submission-table-wrapper">
+            <table class="submission-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Assignment</th>
+                        <th>Deadline</th>
+                        <th>Submitted at</th>
+                        <th>Status</th>
+                        <th>File</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in submissions)
+                    {
+                        <tr @key="(item.StudentId, item.ActivityId)">
+                            <td>
+                                <strong>@item.StudentName</strong>
+                                <div class="student-email">
+                                    @item.StudentEmail
+                                </div>
+                            </td>
+
+                            <td>@item.ActivityTitle</td>
+
+                            <td>
+                                @item.Deadline.ToString("dd MMM yyyy HH:mm")
+                            </td>
+
+                            <td>
+                                @(item.SubmittedAt.HasValue
+                                    ? item.SubmittedAt.Value.ToString("dd MMM yyyy HH:mm")
+                                    : "Not submitted")
+                            </td>
+
+                            <td>
+                                <span class="submission-status @GetStatusClass(item.Status)">
+                                    @GetStatusText(item.Status)
+                                </span>
+                            </td>
+
+                            <td>
+                                @if (item.SubmissionId.HasValue)
+                                {
+                                    <a class="file-download-button"
+                                       href="@GetDownloadUrl(item.SubmissionId.Value)">
+                                        Download
+                                    </a>
+
+                                    @if (!string.IsNullOrWhiteSpace(item.FileName))
+                                    {
+                                        <div class="file-name">
+                                            @item.FileName
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="no-file">No file</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="submission-pagination">
+            <button class="submission-button secondary"
+                    @onclick="PreviousPageAsync"
+                    disabled="@(pageNumber <= 1 || isLoading)">
+                Previous
+            </button>
+
+            <span>Page @pageNumber</span>
+
+            <button class="submission-button secondary"
+                    @onclick="NextPageAsync"
+                    disabled="@(!hasMorePages || isLoading)">
+                Next
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(downloadError))
+    {
+        <p class="submission-error" role="alert">
+            @downloadError
+        </p>
+    }
+</div>
+
+@code {
+    private bool isLoading;
+    private bool hasError;
+
+    private string errorMessage = "Could not load submissions.";
+    private string? downloadError;
+
+    private int courseId;
+    private int? selectedActivityId;
+    private string selectedStatus = "";
+
+    private int pageNumber = 1;
+    private const int PageSize = 20;
+
+    private int totalCount;
+    private bool hasMorePages;
+
+    private List<TeacherAssignmentSubmissionDto> submissions = [];
+    private List<TeacherAssignmentSubmissionDto> activities = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSubmissionsAsync();
+
+    }
+
+    private async Task LoadSubmissionsAsync()
+
+    {
+
+        isLoading = true;
+        hasError = false;
+        downloadError = null;
+
+        try
+        {
+            var url =
+                $"teacher/submissions?PageNumber={pageNumber}" +
+                $"&PageSize={PageSize}";
+
+            if (selectedActivityId.HasValue)
+            {
+                url += $"&activityId={selectedActivityId.Value}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedStatus))
+            {
+                url += $"&status={Uri.EscapeDataString(selectedStatus)}";
+            }
+
+            var response =
+                await ApiProxyClient.GetAsync<
+                    PagedResponse<TeacherAssignmentSubmissionDto>>(url);
+
+            submissions = response?.Items?.ToList() ?? [];
+            totalCount = response?.TotalCount ?? 0;
+
+            hasMorePages = pageNumber * PageSize < totalCount;
+
+            activities = activities
+                .Concat(submissions)
+                .GroupBy(x => x.ActivityId)
+                .Select(g => g.First())
+                .OrderBy(x => x.ActivityTitle)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            hasError = true;
+            errorMessage =
+                "Could not load submissions. Check your API connection and teacher authorization.";
+
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        pageNumber = 1;
+        await LoadSubmissionsAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        selectedActivityId = null;
+        selectedStatus = "";
+        pageNumber = 1;
+
+        await LoadSubmissionsAsync();
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (pageNumber > 1)
+        {
+            pageNumber--;
+            await LoadSubmissionsAsync();
+        }
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (hasMorePages)
+        {
+            pageNumber++;
+            await LoadSubmissionsAsync();
+        }
+    }
+
+    private int CountStatus(string status) =>
+        submissions.Count(x =>
+            string.Equals(x.Status, status,
+                StringComparison.OrdinalIgnoreCase));
+
+    private static string GetStatusText(string? status) =>
+        status?.ToLowerInvariant() switch
+        {
+            "submitted" => "Submitted",
+            "late" => "Late",
+            "missing" => "Missing",
+            "overdue" => "Overdue",
+            _ => status ?? "Unknown"
+        };
+
+    private static string GetStatusClass(string? status) =>
+        status?.ToLowerInvariant() switch
+        {
+            "submitted" => "status-submitted",
+            "late" => "status-late",
+            "missing" => "status-missing",
+            "overdue" => "status-overdue",
+            _ => "status-unknown"
+        };
+
+    private static string GetDownloadUrl(int submissionId) =>
+    $"api/proxy/teacher/submissions/{submissionId}/file";
+
+      
+}

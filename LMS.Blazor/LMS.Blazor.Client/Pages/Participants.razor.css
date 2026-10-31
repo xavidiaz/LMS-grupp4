@@ -1,0 +1,173 @@
+﻿.participants-page {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.participants-header {
+    margin-bottom: 2rem;
+}
+
+    .participants-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .participants-header p {
+        color: #6b7280;
+        margin: 0;
+    }
+
+.participant-group {
+    margin-bottom: 2rem;
+}
+
+.participant-group-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+    .participant-group-heading h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .participant-group-heading span {
+        font-size: 0.9rem;
+        font-weight: 400;
+        color: #9ca3af;
+    }
+
+.participants-card {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.participant-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+    .participant-row:last-child {
+        border-bottom: none;
+    }
+
+.participant-avatar {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+    /* Teacher */
+    .participant-avatar.teacher {
+        background-color: #274f38;
+        color: #ffffff;
+    }
+
+    /* Student */
+    .participant-avatar.student {
+        background-color: #e8f0eb;
+        color: #274f38;
+    }
+
+.participant-content {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.participant-name-row {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+    .participant-name-row h3 {
+        margin: 0;
+        color: #111827;
+        font-size: 0.95rem;
+        font-weight: 650;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+.current-user-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #6b7280;
+    background-color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.participant-email {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #6b7280;
+    font-size: 0.88rem;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+    .participant-email:hover {
+        color: #274f38;
+    }
+
+.mail-icon {
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+
+    .participant-row {
+        padding: 1rem;
+        align-items: flex-start;
+    }
+
+    .participant-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+    }
+
+    .participant-email {
+        width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    .mail-icon {
+        display: none;
+    }
+}

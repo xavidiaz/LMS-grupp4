@@ -1,0 +1,218 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Login, tokens and role protection – user story US16
+# Run top to bottom.
+########################################
+
+# --- Login ---
+
+### 1. Student logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+  client.global.set("refreshToken", response.body.refreshToken);
+  client.global.set("accessExpires", response.body.accessTokenExpiresAtUtc);
+  client.global.set("refreshExpires", response.body.refreshTokenExpiresAtUtc);
+%}
+
+### 2. Wrong password (401)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "wrong-password"
+}
+
+### 3. User does not exist (401)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "nobody@lms.com",
+  "password": "wrong-password"
+}
+
+### 4. Missing password (400)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com"
+}
+
+### 5. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+# --- Who am I ---
+
+### 6. Student reads own claims (200)
+GET {{LMS.API_HostAddress}}/api/auth/me
+Authorization: Bearer {{studentToken}}
+
+### 7. Student calls the demo endpoint (200)
+GET {{LMS.API_HostAddress}}/api/demo-auth
+Authorization: Bearer {{studentToken}}
+
+### 8. No token (401)
+GET {{LMS.API_HostAddress}}/api/auth/me
+
+### 9. Invalid token (401)
+GET {{LMS.API_HostAddress}}/api/auth/me
+Authorization: Bearer not-a-real-token
+
+# --- Refresh token ---
+
+### 10. Wrong refresh token (401)
+POST {{LMS.API_HostAddress}}/api/token/refresh
+Content-Type: application/json
+
+{
+  "accessToken": "{{studentToken}}",
+  "refreshToken": "wrong-token",
+  "accessTokenExpiresAtUtc": "{{accessExpires}}",
+  "refreshTokenExpiresAtUtc": "{{refreshExpires}}"
+}
+
+### 11. Student refreshes the token (200)
+POST {{LMS.API_HostAddress}}/api/token/refresh
+Content-Type: application/json
+
+{
+  "accessToken": "{{studentToken}}",
+  "refreshToken": "{{refreshToken}}",
+  "accessTokenExpiresAtUtc": "{{accessExpires}}",
+  "refreshTokenExpiresAtUtc": "{{refreshExpires}}"
+}
+
+> {%
+  client.global.set("newToken", response.body.accessToken);
+%}
+
+### 12. New token works (200)
+GET {{LMS.API_HostAddress}}/api/auth/me
+Authorization: Bearer {{newToken}}
+
+# --- Role protection, one example per area ---
+
+### 13. Student reads users (403)
+GET {{LMS.API_HostAddress}}/api/users
+Authorization: Bearer {{newToken}}
+
+### 14. Student reads the course list (403)
+GET {{LMS.API_HostAddress}}/api/courses
+Authorization: Bearer {{newToken}}
+
+### 15. Student reads the teacher dashboard (403)
+GET {{LMS.API_HostAddress}}/api/dashboard/teacher
+Authorization: Bearer {{newToken}}
+
+### 16. Student reads teacher submissions (403)
+GET {{LMS.API_HostAddress}}/api/teacher/submissions
+Authorization: Bearer {{newToken}}
+
+### 17. Teacher reads the student dashboard (403)
+GET {{LMS.API_HostAddress}}/api/dashboard/student
+Authorization: Bearer {{teacherToken}}
+
+### 18. Teacher reads my-course (403)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{teacherToken}}
+
+### 19. Teacher reads /mine submissions (403)
+GET {{LMS.API_HostAddress}}/api/submissions/activity/1/mine
+Authorization: Bearer {{teacherToken}}
+
+# --- Another course's modules and activities ---
+
+### 20. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentAToken", response.body.accessToken);
+%}
+
+### 21. Student 2 (Course B) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student2@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("student2Token", response.body.accessToken);
+%}
+
+### 22. Student reads own course (200)
+GET {{LMS.API_HostAddress}}/api/courses/my-course
+Authorization: Bearer {{studentAToken}}
+
+> {%
+  client.global.set("courseA", response.body.id);
+%}
+
+### 23. Student finds a module in own course (200)
+GET {{LMS.API_HostAddress}}/api/Module/course/{{courseA}}
+Authorization: Bearer {{studentAToken}}
+
+> {%
+  client.global.set("moduleA", response.body.items[0].id);
+%}
+
+### 24. Student finds an activity in that module (200)
+GET {{LMS.API_HostAddress}}/api/Activity/module/{{moduleA}}
+Authorization: Bearer {{studentAToken}}
+
+> {%
+  client.global.set("activityA", response.body.items[0].id);
+%}
+
+### 25. Student 2 reads a module in Course A (403)
+GET {{LMS.API_HostAddress}}/api/Module/{{moduleA}}
+Authorization: Bearer {{student2Token}}
+
+### 26. Student 2 reads a module with its course (403, returns 200 today)
+GET {{LMS.API_HostAddress}}/api/Module/{{moduleA}}/course
+Authorization: Bearer {{student2Token}}
+
+### 27. Student 2 lists Course A's modules (403, returns 200 today)
+GET {{LMS.API_HostAddress}}/api/Module/course/{{courseA}}
+Authorization: Bearer {{student2Token}}
+
+### 28. Student 2 reads an activity in Course A (403, returns 200 today)
+GET {{LMS.API_HostAddress}}/api/Activity/{{activityA}}
+Authorization: Bearer {{student2Token}}
+
+### 29. Student 2 lists a Course A module's activities (403, returns 200 today)
+GET {{LMS.API_HostAddress}}/api/Activity/module/{{moduleA}}
+Authorization: Bearer {{student2Token}}

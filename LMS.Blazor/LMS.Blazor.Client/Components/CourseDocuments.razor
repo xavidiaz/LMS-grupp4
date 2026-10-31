@@ -1,0 +1,159 @@
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.DocumentDtos
+@inject IApiProxyClient ApiProxyClient
+
+<section class="documents-card">
+
+    <div class="documents-header">
+        <div class="panel-title">
+            <span class="panel-icon">▤</span>
+            <h2>Documents</h2>
+        </div>
+        @if (documents is not null)
+        {
+            <span class="document-count">@documents.Length files</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <p class="doc-message success" role="status">@successMessage</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <p class="doc-message error" role="alert">@errorMessage</p>
+    }
+
+    <div class="upload-area">
+        <InputFile @key="inputKey" OnChange="UploadAsync" accept="@string.Join(",", AllowedExtensions)"
+                    disabled="@isUploading" />
+        <span>@(isUploading ? "Uploading..." : "PDF, DOCX, PPTX, XLSX, TXT, JPG, PNG · max 10 MB")</span>
+    </div>
+
+    @if (documents is null)
+    {
+        <p class="empty-state">Loading...</p>
+    }
+    else if (documents.Length == 0)
+    {
+        <p class="empty-state">No documents yet.</p>
+    }
+    else
+    {
+        <div>
+            @foreach (var d in documents)
+            {
+                <div class="document-item">
+                    <div>
+                        <a href="@($"api/proxy/documents/{d.Id}/download")" download>@d.FileName</a>
+                        <p>@FormatSize(d.Size) · @d.UploadedAt.ToString("dd MMM yyyy")</p>
+                    </div>
+                    <AuthorizeView Roles="Teacher">
+                        <button class="delete-button" @onclick="() => DeleteAsync(d.Id)">Delete</button>
+                    </AuthorizeView>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public int Id { get; set; }
+    [Parameter, EditorRequired] public string Type { get; set; }
+
+    private const long MaxFileSize = 10 * 1024 * 1024;
+    private static readonly string[] AllowedExtensions =
+        [".pdf", ".docx", ".pptx", ".xlsx", ".txt", ".jpg", ".jpeg", ".png"];
+
+    private DocumentDto[]? documents;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isUploading;
+    private Guid inputKey = Guid.NewGuid();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadDocumentsAsync();
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        try
+        {
+            if (Type == "course")
+                documents = await ApiProxyClient.GetAsync<DocumentDto[]>($"documents/course/{Id}") ?? [];
+            else {
+                documents = await ApiProxyClient.GetAsync<DocumentDto[]>($"documents/module/{Id}") ?? [];
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load documents: " + ex.Message;
+        }
+    }
+
+    private async Task UploadAsync(InputFileChangeEventArgs e)
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        var file = e.File;
+
+        // Client-side check for quick feedback; the API validates again.
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(extension))
+        {
+            errorMessage = $"File type {extension} is not allowed.";
+            return;
+        }
+        if (file.Size > MaxFileSize)
+        {
+            errorMessage = "File is larger than 10 MB.";
+            return;
+        }
+
+        isUploading = true;
+
+        try
+        {
+            var fileContent = new StreamContent(file.OpenReadStream(MaxFileSize));
+            fileContent.Headers.ContentType = new(file.ContentType);
+
+            var content = new MultipartFormDataContent
+            {
+                { fileContent, "file", file.Name },
+                { new StringContent(Id.ToString()), Type + "Id" }
+            };
+
+            await ApiProxyClient.SendAsync<DocumentDto>(HttpMethod.Post, "documents", content);
+            await LoadDocumentsAsync();
+            successMessage = $"{e.File.Name} uploaded.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Upload failed: " + ex.Message;
+        }
+        finally
+        {
+            isUploading = false;
+            inputKey = Guid.NewGuid();
+        }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            await ApiProxyClient.DeleteAsync($"documents/{id}");
+            await LoadDocumentsAsync();
+            successMessage = "Document deleted.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Delete failed: " + ex.Message;
+        }
+    }
+    private static string FormatSize(long bytes) => bytes < 1024 ? $"{bytes} B" : $"{Math.Ceiling(bytes / 1024.0)} KB";
+
+}

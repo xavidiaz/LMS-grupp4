@@ -1,0 +1,124 @@
+@LMS.API_HostAddress = http://localhost:5279
+
+# Local seed password. It differs between machines, so update it to match yours:
+# dotnet user-secrets list --project LMS.API (key "password")
+@SeedPassword = Dev1!KDXKDFZZ9Bbk
+
+########################################
+# Notifications – user story US14
+# Run top to bottom.
+# Adds one submission with feedback, which creates the notification.
+########################################
+
+### 1. Teacher logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Teacher@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("teacherToken", response.body.accessToken);
+%}
+
+### 2. Student (Course A) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("studentToken", response.body.accessToken);
+%}
+
+### 3. Student 2 (Course B) logs in (200)
+POST {{LMS.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "Student2@Lms.com",
+  "password": "{{SeedPassword}}"
+}
+
+> {%
+  client.global.set("student2Token", response.body.accessToken);
+%}
+
+### 4. Student finds an assignment (200)
+GET {{LMS.API_HostAddress}}/api/Activity/my-assignments?PageNumber=1&PageSize=100
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.global.set("assignmentId", response.body.items[0].id);
+%}
+
+### 5. Student submits (200)
+POST {{LMS.API_HostAddress}}/api/submissions
+Authorization: Bearer {{studentToken}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="http-us14.txt"
+Content-Type: text/plain
+
+Test file content
+--LmsBoundary
+Content-Disposition: form-data; name="activityId"
+
+{{assignmentId}}
+--LmsBoundary--
+
+> {%
+  client.global.set("submissionId", response.body.id);
+%}
+
+### 6. Teacher gives feedback, which notifies the student (200)
+POST {{LMS.API_HostAddress}}/api/submissions/{{submissionId}}/feedback
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "comment": "Feedback from US14.",
+  "grade": 7
+}
+
+# --- Read and mark as read ---
+
+### 7. Student sees the notification (200)
+GET {{LMS.API_HostAddress}}/api/notifications
+Authorization: Bearer {{studentToken}}
+
+> {%
+  client.global.set("notificationId", response.body[0].id);
+%}
+
+### 8. Student 2 sees only own notifications (200)
+GET {{LMS.API_HostAddress}}/api/notifications
+Authorization: Bearer {{student2Token}}
+
+### 9. No token (401)
+GET {{LMS.API_HostAddress}}/api/notifications
+
+### 10. Student 2 marks someone else's notification (404)
+PATCH {{LMS.API_HostAddress}}/api/notifications/{{notificationId}}/read
+Authorization: Bearer {{student2Token}}
+
+### 11. Notification does not exist (404)
+PATCH {{LMS.API_HostAddress}}/api/notifications/999999/read
+Authorization: Bearer {{studentToken}}
+
+### 12. No token (401)
+PATCH {{LMS.API_HostAddress}}/api/notifications/{{notificationId}}/read
+
+### 13. Student marks it as read (204)
+PATCH {{LMS.API_HostAddress}}/api/notifications/{{notificationId}}/read
+Authorization: Bearer {{studentToken}}
+
+### 14. Student sees it as read (200, isRead true)
+GET {{LMS.API_HostAddress}}/api/notifications
+Authorization: Bearer {{studentToken}}

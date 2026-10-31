@@ -1,0 +1,44 @@
+﻿
+@page "/"
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+
+@attribute [Authorize]
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Dashboard</PageTitle>
+
+<p>Opening your dashboard...</p>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+        // US13 - Teacher Dashboard
+        if (user.IsInRole("Teacher"))
+        {
+            NavigationManager.NavigateTo(
+                "/teacher-dashboard",
+                replace: true);
+
+            return;
+        }
+
+        // US12 - Student Dashboard
+        if (user.IsInRole("Student"))
+        {
+            NavigationManager.NavigateTo(
+                "/student-dashboard",
+                replace: true);
+
+            return;
+        }
+    }
+}
