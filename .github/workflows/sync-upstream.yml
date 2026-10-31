@@ -1,0 +1,27 @@
+# Keeps this deployment fork up to date with the group's repo. A merge made
+# with GITHUB_TOKEN doesn't trigger other workflows, so this starts the image
+# build itself; the Pi picks up the new images within 5 minutes.
+name: Sync from the group repo
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - run: |
+          type=$(gh api "repos/$GH_REPO/merge-upstream" -f branch=main --jq .merge_type)
+          echo "merge type: $type"
+          if [ "$type" != "none" ]; then
+            gh workflow run publish.yml --ref main
+          fi
