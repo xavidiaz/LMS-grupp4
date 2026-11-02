@@ -1,8 +1,12 @@
-﻿@page "/teacher/submissions"
+﻿
+@page "/teacher/submissions"
 
+@using System.Net.Http
+@using System.Net.Http.Json
 @using LMS.Blazor.Client.Components
 @using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.DTOs.SubmissionDtos
+@using LMS.Shared.DTOs.FeedbackDtos
 @using LMS.Shared.Paging
 @using Microsoft.AspNetCore.Authorization
 
@@ -20,9 +24,8 @@
     <div class="submission-filters">
 
         <div class="filter-field">
-            <label for="activity">Assignment</label>
-            <select id="activity"
-                    @bind="selectedActivityId">
+            <label class="form-label" for="activity">Assignment</label>
+            <select class="form-select" id="activity" @bind="selectedActivityId">
                 <option value="">All assignments</option>
                 @foreach (var activity in activities)
                 {
@@ -34,8 +37,8 @@
         </div>
 
         <div class="filter-field">
-            <label for="status">Submission status</label>
-            <select id="status" @bind="selectedStatus">
+            <label class="form-label" for="status">Submission status</label>
+            <select class="form-select" id="status" @bind="selectedStatus">
                 <option value="">All statuses</option>
                 <option value="Submitted">Submitted</option>
                 <option value="Late">Late</option>
@@ -44,13 +47,13 @@
             </select>
         </div>
 
-        <button class="submission-button"
+        <button class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
                 @onclick="ApplyFiltersAsync"
                 disabled="@isLoading">
             Apply filters
         </button>
 
-        <button class="submission-button secondary"
+        <button class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                 @onclick="ClearFiltersAsync"
                 disabled="@isLoading">
             Clear
@@ -63,15 +66,13 @@
     }
     else if (hasError)
     {
-        <ContentState Type="error"
-                      Message="@errorMessage" />
+        <ContentState Type="error" Message="@errorMessage" />
 
-        <button class="submission-button"
+        <button class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
                 @onclick="LoadSubmissionsAsync">
             Try again
         </button>
     }
-
     else if (submissions.Count == 0)
     {
         <ContentState Type="empty"
@@ -80,30 +81,30 @@
     else
     {
         <div class="submission-summary">
-            <div class="summary-card">
+            <div class="card summary-card">
                 <span>Total records</span>
                 <strong>@totalCount</strong>
             </div>
 
-            <div class="summary-card">
+            <div class="card summary-card">
                 <span>Submitted</span>
                 <strong>@CountStatus("Submitted")</strong>
             </div>
 
-            <div class="summary-card">
+            <div class="card summary-card">
                 <span>Late</span>
                 <strong>@CountStatus("Late")</strong>
             </div>
 
-            <div class="summary-card">
+            <div class="card summary-card">
                 <span>Missing / overdue</span>
                 <strong>@(CountStatus("Missing") + CountStatus("Overdue"))</strong>
             </div>
         </div>
 
-        <div class="submission-table-wrapper">
-            <table class="submission-table">
-                <thead>
+        <div class="table-responsive submission-table-wrapper">
+            <table class="table table-hover align-middle mb-0 submission-table">
+                <thead class="table-light">
                     <tr>
                         <th>Student</th>
                         <th>Assignment</th>
@@ -111,6 +112,7 @@
                         <th>Submitted at</th>
                         <th>Status</th>
                         <th>File</th>
+                        <th>Feedback</th>
                     </tr>
                 </thead>
 
@@ -138,7 +140,7 @@
                             </td>
 
                             <td>
-                                <span class="submission-status @GetStatusClass(item.Status)">
+                                <span class="badge submission-status @GetStatusClass(item.Status)">
                                     @GetStatusText(item.Status)
                                 </span>
                             </td>
@@ -146,7 +148,7 @@
                             <td>
                                 @if (item.SubmissionId.HasValue)
                                 {
-                                    <a class="file-download-button"
+                                    <a class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                                        href="@GetDownloadUrl(item.SubmissionId.Value)">
                                         Download
                                     </a>
@@ -163,6 +165,21 @@
                                     <span class="no-file">No file</span>
                                 }
                             </td>
+
+                            <td>
+                                @if (item.SubmissionId.HasValue)
+                                {
+                                    <button type="button"
+                                            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
+                                            @onclick="() => OpenFeedback(item)">
+                                        Give Feedback
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="no-file">No submission</span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -170,7 +187,7 @@
         </div>
 
         <div class="submission-pagination">
-            <button class="submission-button secondary"
+            <button class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                     @onclick="PreviousPageAsync"
                     disabled="@(pageNumber <= 1 || isLoading)">
                 Previous
@@ -178,7 +195,7 @@
 
             <span>Page @pageNumber</span>
 
-            <button class="submission-button secondary"
+            <button class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                     @onclick="NextPageAsync"
                     disabled="@(!hasMorePages || isLoading)">
                 Next
@@ -188,9 +205,90 @@
 
     @if (!string.IsNullOrWhiteSpace(downloadError))
     {
-        <p class="submission-error" role="alert">
+        <p class="alert alert-danger submission-error" role="alert">
             @downloadError
         </p>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(feedbackSuccess))
+    {
+        <p class="alert alert-success feedback-success" role="status">
+            @feedbackSuccess
+        </p>
+    }
+
+    @if (showFeedbackModal && selectedSubmission is not null)
+    {
+        <div class="modal d-flex align-items-center justify-content-center feedback-modal-backdrop" @onclick="CloseFeedback">
+            <div class="modal-content feedback-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="feedback-modal-title"
+                 @onclick:stopPropagation="true">
+
+                @if(latestFeedback is not null)
+                {
+                    <h2 id="feedback-modal-title">Give another feedback</h2>
+
+                }
+                else
+                {
+                    <h2 id="feedback-modal-title">Give Feedback</h2>
+
+                }
+                <p class="feedback-modal-description">
+                    <strong>Student:</strong> @selectedSubmission.StudentName
+                </p>
+
+                <p class="feedback-modal-description">
+                    <strong>Assignment:</strong> @selectedSubmission.ActivityTitle
+                </p>
+
+                <div class="feedback-form-field">
+                    <label class="form-label" for="feedback-comment">Comment</label>
+                    <textarea class="form-control" id="feedback-comment"
+                              @bind="feedbackComment"
+                              maxlength="2000"
+                              rows="5"
+                              placeholder="Write your feedback here...">
+                    </textarea>
+                    <small>Maximum 2000 characters.</small>
+                </div>
+
+                <div class="feedback-form-field">
+                    <label class="form-label" for="feedback-grade">Grade (0–10)</label>
+                    <input class="form-control" id="feedback-grade"
+                           type="number"
+                           min="0"
+                           max="10"
+                           step="0.5"
+                           @bind="feedbackGrade" />
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(feedbackError))
+                {
+                    <p class="alert alert-danger submission-error" role="alert">
+                        @feedbackError
+                    </p>
+                }
+
+                <div class="feedback-modal-actions">
+                    <button type="button"
+                            class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
+                            @onclick="CloseFeedback"
+                            disabled="@isSubmittingFeedback">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
+                            @onclick="SubmitFeedbackAsync"
+                            disabled="@isSubmittingFeedback">
+                        @(isSubmittingFeedback ? "Submitting..." : "Submit Feedback")
+                    </button>
+                </div>
+            </div>
+        </div>
     }
 </div>
 
@@ -214,16 +312,23 @@
     private List<TeacherAssignmentSubmissionDto> submissions = [];
     private List<TeacherAssignmentSubmissionDto> activities = [];
 
+    // US11 #67 - Teacher feedback
+    private bool showFeedbackModal;
+    private bool isSubmittingFeedback;
+    private TeacherAssignmentSubmissionDto? selectedSubmission;
+    private string feedbackComment = string.Empty;
+    private decimal? feedbackGrade;
+    private string? feedbackError;
+    private string? feedbackSuccess;
+    private FeedbackDto? latestFeedback;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadSubmissionsAsync();
-
     }
 
     private async Task LoadSubmissionsAsync()
-
     {
-
         isLoading = true;
         hasError = false;
         downloadError = null;
@@ -333,7 +438,128 @@
         };
 
     private static string GetDownloadUrl(int submissionId) =>
-    $"api/proxy/teacher/submissions/{submissionId}/file";
+        $"api/proxy/teacher/submissions/{submissionId}/file";
 
-      
+    private async Task OpenFeedback(TeacherAssignmentSubmissionDto submission)
+    {
+        if (!submission.SubmissionId.HasValue)
+            return;
+
+        selectedSubmission = submission;
+        feedbackComment = string.Empty;
+        feedbackGrade = null;
+        feedbackError = null;
+        feedbackSuccess = null;
+        latestFeedback = null;
+        showFeedbackModal = true;
+        try
+        {
+            var existingFeedback =
+                await ApiProxyClient.GetAsync<IEnumerable<FeedbackDto>>(
+                    $"submissions/{submission.SubmissionId.Value}/feedback");
+
+            // API returns feedback newest first.
+             latestFeedback = existingFeedback?.FirstOrDefault();
+
+            if (latestFeedback is not null)
+            {
+                feedbackComment = latestFeedback.Comment;
+                feedbackGrade = latestFeedback.Grade;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            feedbackError = "Could not load existing feedback.";
+            Console.WriteLine(ex);
+        }
+    }
+
+    private void CloseFeedback()
+    {
+        if (isSubmittingFeedback)
+            return;
+
+        showFeedbackModal = false;
+        selectedSubmission = null;
+        feedbackError = null;
+    }
+
+    private async Task SubmitFeedbackAsync()
+    {
+        if (selectedSubmission?.SubmissionId is not int submissionId)
+            return;
+
+        feedbackError = null;
+
+        if (string.IsNullOrWhiteSpace(feedbackComment))
+        {
+            feedbackError = "Comment is required.";
+            return;
+        }
+
+        if (feedbackComment.Length > 2000)
+        {
+            feedbackError = "Comment must not exceed 2000 characters.";
+            return;
+        }
+
+        if (feedbackGrade is null)
+        {
+            feedbackError = "Grade is required.";
+            return;
+        }
+
+        if (feedbackGrade < 0 || feedbackGrade > 10)
+        {
+            feedbackError = "Grade must be between 0 and 10.";
+            return;
+        }
+         
+        if (latestFeedback is not null &&
+           feedbackComment.Trim() == latestFeedback.Comment &&
+           feedbackGrade == latestFeedback.Grade)
+        {
+            feedbackError = "Change the comment or grade before submitting.";
+             return;
+        }
+
+        isSubmittingFeedback = true;
+
+        try
+        {
+            var dto = new CreateFeedbackDto
+            {
+                Comment = feedbackComment.Trim(),
+                Grade = feedbackGrade.Value
+
+            };
+
+            using var content = JsonContent.Create(dto);
+
+            var result = await ApiProxyClient.SendAsync<FeedbackDto>(
+                HttpMethod.Post,
+                $"submissions/{submissionId}/feedback",
+                content);
+
+            if (result is null)
+            {
+                feedbackError = "Could not confirm that feedback was saved.";
+                return;
+            }
+
+            feedbackSuccess = "Feedback submitted successfully.";
+            showFeedbackModal = false;
+            selectedSubmission = null;
+        }
+        catch (Exception ex)
+        {
+            feedbackError = "Could not submit feedback. Please try again.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSubmittingFeedback = false;
+        }
+    }
 }

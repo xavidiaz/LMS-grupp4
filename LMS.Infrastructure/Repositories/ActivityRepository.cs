@@ -58,7 +58,8 @@ namespace LMS.Infrastructure.Repositories
             int id,
             bool trackChanges = false)
         {
-            IQueryable<Activity> query = _context.Activities;
+            IQueryable<Activity> query = _context.Activities
+                .Include(a => a.ActionType);
 
             if (!trackChanges)
             {
@@ -117,12 +118,12 @@ namespace LMS.Infrastructure.Repositories
         {
             var now = DateTime.UtcNow;
 
-           var query = _context.Activities
-           .Where(a =>
-           a.ActionType.Name == "Assignment" &&
-           a.Module != null &&
-           a.Module.Course.ApplicationUsers
-               .Any(u => u.Id == userId));
+            var query = _context.Activities
+            .Where(a =>
+            a.ActionType.Name == "Assignment" &&
+            a.Module != null &&
+            a.Module.Course.ApplicationUsers
+                .Any(u => u.Id == userId));
 
             if (!trackChanges)
             {
@@ -152,6 +153,8 @@ namespace LMS.Infrastructure.Repositories
                     ? (x.Activity.EndDate < now
                         ? "Overdue"
                         : "NotSubmitted")
+                    : x.Submission.Status == SubmissionStatus.Late
+                    ? "Late"
                     : "Submitted",
 
                 HasFeedback = x.Submission != null &&

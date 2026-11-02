@@ -41,6 +41,19 @@ public class DocumentController(IServiceManager serviceManager) : ControllerBase
         return Ok(documents);
     }
 
+    [HttpGet("activity/{activityId:int}")]
+    [Authorize(Roles = "Student,Teacher")]
+    [SwaggerOperation(Summary = "Activity documents", Description = "Documents for an activity")]
+    [SwaggerResponse(StatusCodes.Status200OK, "successful", typeof(IEnumerable<DocumentDto>))]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "forbidden")]
+    public async Task<ActionResult<IEnumerable<DocumentDto>>> GetByActivity(int activityId)
+    {
+        if (!await CanAccessActivityDocumentAsync(activityId))
+            return Forbid();
+        var documents = await _serviceManager.DocumentService.GetByActivityIdAsync(activityId);
+        return Ok(documents);
+    }
+
     [HttpGet("{id:int}/download")]
     [Authorize(Roles = "Teacher,Student")]
     [SwaggerOperation(Summary = "Download document", Description = "Returns the file")]
@@ -68,19 +81,30 @@ public class DocumentController(IServiceManager serviceManager) : ControllerBase
     [RequestSizeLimit(11 * 1024 * 1024)]
     [SwaggerOperation(Summary = "Upload document", Description = "Max 10 MB. PDF, DOCX, PPTX, XLSX, TXT, JPG, PNG")]
     [SwaggerResponse(StatusCodes.Status200OK, "successful", typeof(DocumentDto))]
-    [SwaggerResponse(StatusCodes.Status400BadRequest, "invalid file")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "invalid file, or not exactly one of courseId, moduleId and activityId")]
     public async Task<ActionResult<DocumentDto>> Upload(
         IFormFile file,
         [FromForm] int? courseId,
-        [FromForm] int? moduleId)
+        [FromForm] int? moduleId,
+        [FromForm] int? activityId)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userId))
             return Forbid();
-        if (!await CanUploadDocumentAsync(courseId, moduleId))
+
+        // A document belongs to exactly one course, module or activity
+        if (new[] { courseId, moduleId, activityId }.Count(id => id is not null) != 1)
+            return BadRequest("Set exactly one of courseId, moduleId and activityId.");
+
+        if (activityId is not null)
+        {
+            if (!await CanAccessActivityDocumentAsync(activityId))
+                return Forbid();
+        }
+        else if (!await CanUploadDocumentAsync(courseId, moduleId))
             return Forbid();
 
-        var dto = new UploadDocumentDto(file.FileName, file.ContentType, file.Length, courseId, moduleId);
+        var dto = new UploadDocumentDto(file.FileName, file.ContentType, file.Length, courseId, moduleId, activityId);
 
         await using var stream = file.OpenReadStream();
         var result = await _serviceManager.DocumentService.UploadAsync(dto, stream, userId);
@@ -129,6 +153,21 @@ public class DocumentController(IServiceManager serviceManager) : ControllerBase
         var user = await _serviceManager.UserService.GetUserAsync(userId);
         var module = await _serviceManager.ModuleService.GetByIdAsync((int)moduleId);
         return module!.CourseId == user.CourseId;
+    }
+
+    // Teachers can access all activities, students only those in their course
+    private async Task<bool> CanAccessActivityDocumentAsync(int? activityId)
+    {
+        if (User.IsInRole("Teacher"))
+            return true;
+
+        if (activityId is null)
+            return false;
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+            return false;
+        return await _serviceManager.CourseAccessService.CanAccessActivityAsync(userId, (int)activityId);
     }
 
     private async Task<bool> CanDownloadDocumentAsync(int documentId)

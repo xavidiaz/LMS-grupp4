@@ -17,6 +17,28 @@ public class US07StudentDocumentsTests(ApiFactory factory) : ApiTestBase(factory
     }
 
     [Fact]
+    public async Task Student_shares_with_own_activity_returns_200()
+    {
+        var student = await LoginAsync(Student);
+        var activityId = await GetAssignmentIdAsync(Student);
+
+        var response = await UploadDocumentAsync(student, "activityId", activityId);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Student_shares_with_another_courses_activity_returns_403()
+    {
+        var student = await LoginAsync(Student);
+        var otherActivityId = await GetAssignmentIdAsync(StudentB);
+
+        var response = await UploadDocumentAsync(student, "activityId", otherActivityId);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Forbidden_file_type_returns_400()
     {
         var student = await LoginAsync(Student);

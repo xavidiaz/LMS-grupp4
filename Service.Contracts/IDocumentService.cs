@@ -6,6 +6,7 @@ public interface IDocumentService
 {
     Task<IEnumerable<DocumentDto>> GetByCourseIdAsync(int courseId);
     Task<IEnumerable<DocumentDto>> GetByModuleIdAsync(int moduleId);
+    Task<IEnumerable<DocumentDto>> GetByActivityIdAsync(int activityId);
     Task<DocumentDto?> GetDocumentAsync(int id);
     Task<DocumentDto> UploadAsync(UploadDocumentDto document, Stream content, string userId);
     Task<DocumentFileDto?> DownloadAsync(int id);

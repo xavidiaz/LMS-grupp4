@@ -84,8 +84,8 @@ namespace LMS.Infrastructure.Repositories
             return await _context.Modules.AnyAsync(m =>
                 m.CourseId == courseId &&
                 (excludeModuleId == null || m.Id != excludeModuleId) &&
-                m.StartDate <= endDate &&
-                m.EndDate >= startDate);
+                m.StartDate < endDate &&
+                m.EndDate > startDate);
         }
     }
 }

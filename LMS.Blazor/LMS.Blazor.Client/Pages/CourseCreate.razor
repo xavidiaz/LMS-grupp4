@@ -24,10 +24,10 @@
     </header>
 
     <!-- MAIN CARD -->
-    <section class="course-create-card">
+    <section class="card course-create-card">
 
         <!-- CARD HEADER -->
-        <div class="course-create-card-header">
+        <div class="card-header course-create-card-header">
             <div>
                 <h2>Course Information</h2>
                 <p>Enter the details for the new course below.</p>
@@ -39,7 +39,7 @@
         <!-- ERROR MESSAGE -->
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
-            <div class="course-create-error" role="alert">
+            <div class="alert alert-danger course-create-error" role="alert">
                 <span class="bi bi-exclamation-circle" aria-hidden="true"></span>
 
                 <span>@errorMessage</span>

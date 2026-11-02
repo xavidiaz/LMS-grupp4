@@ -2,7 +2,7 @@
 @using LMS.Shared.DTOs.DocumentDtos
 @inject IApiProxyClient ApiProxyClient
 
-<section class="documents-card">
+<section class="card documents-card">
 
     <div class="documents-header">
         <div class="panel-title">
@@ -17,11 +17,11 @@
 
     @if (!string.IsNullOrWhiteSpace(successMessage))
     {
-        <p class="doc-message success" role="status">@successMessage</p>
+        <p class="alert alert-success mt-3 mb-0" role="status">@successMessage</p>
     }
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
-        <p class="doc-message error" role="alert">@errorMessage</p>
+        <p class="alert alert-danger mt-3 mb-0" role="alert">@errorMessage</p>
     }
 
     <div class="upload-area">
@@ -49,7 +49,7 @@
                         <p>@FormatSize(d.Size) · @d.UploadedAt.ToString("dd MMM yyyy")</p>
                     </div>
                     <AuthorizeView Roles="Teacher">
-                        <button class="delete-button" @onclick="() => DeleteAsync(d.Id)">Delete</button>
+                        <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-2 flex-shrink-0" @onclick="() => DeleteAsync(d.Id)">Delete</button>
                     </AuthorizeView>
                 </div>
             }
@@ -80,11 +80,8 @@
     {
         try
         {
-            if (Type == "course")
-                documents = await ApiProxyClient.GetAsync<DocumentDto[]>($"documents/course/{Id}") ?? [];
-            else {
-                documents = await ApiProxyClient.GetAsync<DocumentDto[]>($"documents/module/{Id}") ?? [];
-            }
+            // Type is "course", "module" or "activity", matching the API route
+            documents = await ApiProxyClient.GetAsync<DocumentDto[]>($"documents/{Type}/{Id}") ?? [];
         }
         catch (Exception ex)
         {

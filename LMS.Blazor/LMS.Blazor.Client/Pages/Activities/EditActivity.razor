@@ -26,7 +26,7 @@
 
     @if (isLoading)
     {
-        <div class="edit-activity-card">
+        <div class="card edit-activity-card">
             <div class="edit-activity-state">
                 <div class="spinner-border edit-activity-spinner"
                      role="status">
@@ -40,8 +40,8 @@
     }
     else if (activity is null)
     {
-        <div class="edit-activity-card">
-            <div class="edit-activity-error" role="alert">
+        <div class="card edit-activity-card">
+            <div class="alert alert-danger edit-activity-error" role="alert">
                 <span class="bi bi-exclamation-circle"
                       aria-hidden="true"></span>
                 <span>@(errorMessage ?? "Activity not found.")</span>
@@ -49,7 +49,7 @@
 
             <div class="edit-activity-footer">
                 <button type="button"
-                        class="edit-activity-cancel-button"
+                        class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                         @onclick="GoBack">
                     <span class="bi bi-arrow-left"
                           aria-hidden="true"></span>
@@ -60,10 +60,10 @@
     }
     else
     {
-        <div class="edit-activity-card">
+        <div class="card edit-activity-card">
 
             <!-- CARD HEADER -->
-            <div class="edit-activity-card-header">
+            <div class="card-header edit-activity-card-header">
                 <div>
                     <h2>Activity Information</h2>
                     <p>Make changes to the activity information below.</p>
@@ -75,7 +75,7 @@
 
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                <div class="edit-activity-error" role="alert">
+                <div class="alert alert-danger edit-activity-error" role="alert">
                     <span class="bi bi-exclamation-circle"
                           aria-hidden="true"></span>
                     <span>@errorMessage</span>
@@ -95,13 +95,13 @@
                     </div>
 
                     <!-- ACTIVITY TYPE -->
-                    <div class="edit-activity-field">
-                        <label for="activityType">
+                    <div>
+                        <label class="form-label" for="activityType">
                             Activity Type
                         </label>
 
                         <InputSelect id="activityType"
-                                     class="edit-activity-input"
+                                     class="form-select"
                                      @bind-Value="activity.ActionTypeId">
                             @foreach (var actionType in actionTypes)
                             {
@@ -113,13 +113,13 @@
                     </div>
 
                     <!-- TITLE -->
-                    <div class="edit-activity-field">
-                        <label for="activityTitle">
+                    <div>
+                        <label class="form-label" for="activityTitle">
                             Title
                         </label>
 
                         <InputText id="activityTitle"
-                                   class="edit-activity-input"
+                                   class="form-control"
                                    @bind-Value="activity.Title"
                                    placeholder="Enter activity title" />
 
@@ -127,13 +127,13 @@
                     </div>
 
                     <!-- DESCRIPTION -->
-                    <div class="edit-activity-field">
-                        <label for="activityDescription">
+                    <div>
+                        <label class="form-label" for="activityDescription">
                             Description
                         </label>
 
                         <InputTextArea id="activityDescription"
-                                       class="edit-activity-input edit-activity-textarea"
+                                       class="form-control"
                                        @bind-Value="activity.Description"
                                        rows="4"
                                        placeholder="Enter activity description" />
@@ -142,28 +142,28 @@
                     </div>
 
                     <!-- DATE AND TIME -->
-                    <div class="edit-activity-date-grid">
+                    <div class="row g-4">
 
-                        <div class="edit-activity-field">
-                            <label for="activityStart">
+                        <div class="col-md-6">
+                            <label class="form-label" for="activityStart">
                                 Start Time
                             </label>
 
                             <InputDate id="activityStart"
-                                       class="edit-activity-input"
+                                       class="form-control"
                                        Type="InputDateType.DateTimeLocal"
                                        @bind-Value="activity.StartDate" />
 
                             <ValidationMessage For="@(() => activity.StartDate)" />
                         </div>
 
-                        <div class="edit-activity-field">
-                            <label for="activityEnd">
+                        <div class="col-md-6">
+                            <label class="form-label" for="activityEnd">
                                 End Time
                             </label>
 
                             <InputDate id="activityEnd"
-                                       class="edit-activity-input"
+                                       class="form-control"
                                        Type="InputDateType.DateTimeLocal"
                                        @bind-Value="activity.EndDate" />
 
@@ -177,13 +177,13 @@
                 <!-- FORM ACTIONS -->
                 <div class="edit-activity-footer">
 
-                    <a class="edit-activity-cancel-button"
+                    <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                        href="@($"/modules/{activity.ModuleId}/activities")">
                         Cancel
                     </a>
 
                     <button type="submit"
-                            class="edit-activity-save-button"
+                            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
                             disabled="@isSaving">
 
                         @if (isSaving)

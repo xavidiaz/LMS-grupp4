@@ -102,4 +102,58 @@ public class US06DocumentsTests(ApiFactory factory) : ApiTestBase(factory)
         Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, second.StatusCode);
     }
+
+    [Fact]
+    public async Task Teacher_uploads_activity_document_and_it_is_listed()
+    {
+        var teacher = await LoginAsync(Teacher);
+        var activityId = await GetAssignmentIdAsync(Student);
+
+        var id = await ReadIdAsync(await UploadDocumentAsync(teacher, "activityId", activityId));
+        var list = await ReadJsonAsync(await teacher.GetAsync($"/api/documents/activity/{activityId}"));
+
+        Assert.Contains(list.EnumerateArray(), d => d.GetProperty("id").GetInt32() == id);
+    }
+
+    [Fact]
+    public async Task Activity_documents_are_limited_to_the_course()
+    {
+        var teacher = await LoginAsync(Teacher);
+        var student = await LoginAsync(Student);
+        var otherStudent = await LoginAsync(StudentB);
+        var activityId = await GetAssignmentIdAsync(Student);
+        var id = await ReadIdAsync(await UploadDocumentAsync(teacher, "activityId", activityId));
+        var listUrl = $"/api/documents/activity/{activityId}";
+        var downloadUrl = $"/api/documents/{id}/download";
+
+        Assert.Equal(HttpStatusCode.OK, (await student.GetAsync(listUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await otherStudent.GetAsync(listUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await student.GetAsync(downloadUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await otherStudent.GetAsync(downloadUrl)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_without_exactly_one_target_returns_400()
+    {
+        var teacher = await LoginAsync(Teacher);
+        var courseId = await GetMyCourseIdAsync(await LoginAsync(Student));
+        var activityId = await GetAssignmentIdAsync(Student);
+
+        var both = FileForm("document.txt", "courseId", courseId);
+        both.Add(new StringContent(activityId.ToString()), "activityId");
+        var none = FileForm("document.txt", "unused", 0);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await teacher.PostAsync("/api/documents", both)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await teacher.PostAsync("/api/documents", none)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Activity_that_does_not_exist_returns_404()
+    {
+        var teacher = await LoginAsync(Teacher);
+
+        var response = await UploadDocumentAsync(teacher, "activityId", 999999);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }

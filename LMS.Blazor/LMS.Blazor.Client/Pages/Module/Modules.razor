@@ -25,7 +25,7 @@
 
         @if (isTeacher)
         {
-            <a class="modules-add-button"
+            <a class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
                href="@($"/modules/create/{CourseId}")">
                 <span class="bi bi-plus-circle"></span>
                 Add Module
@@ -34,9 +34,9 @@
     </header>
 
     <!-- MAIN CARD -->
-    <section class="modules-card">
+    <section class="card modules-card">
 
-        <div class="modules-card-header">
+        <div class="card-header modules-card-header">
             <div>
                 <h2>All Modules</h2>
                 <p>
@@ -68,7 +68,7 @@
         }
         else if (!string.IsNullOrWhiteSpace(errorMessage))
         {
-            <div class="modules-error" role="alert">
+            <div class="alert alert-danger modules-error" role="alert">
                 <span class="bi bi-exclamation-circle"
                       aria-hidden="true"></span>
                 <span>@errorMessage</span>
@@ -85,9 +85,9 @@
         }
         else
         {
-            <div class="modules-table-wrapper">
-                <table class="modules-table">
-                    <thead>
+            <div class="table-responsive modules-table-wrapper">
+                <table class="table table-hover align-middle mb-0 modules-table">
+                    <thead class="table-light">
                         <tr>
                             <th>MODULE ID</th>
                             <th>MODULE NAME</th>
@@ -109,7 +109,7 @@
                         {
                             <tr @key="module.Id">
                                 <td>
-                                    <span class="modules-id-badge">
+                                    <span class="badge modules-id-badge">
                                         @module.Id
                                     </span>
                                 </td>
@@ -118,9 +118,10 @@
                                     <div class="modules-name-cell">
                                         <span class="modules-name-icon bi bi-journal-bookmark"
                                               aria-hidden="true"></span>
-                                        <span class="modules-name">
+                                        <a class="modules-name"
+                                           href="@($"/modules/{module.Id}")">
                                             @module.Name
-                                        </span>
+                                        </a>
                                     </div>
                                 </td>
 
@@ -133,7 +134,7 @@
                                 </td>
 
                                 <td>
-                                    <a class="modules-schedule-button"
+                                    <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                                        href="@($"/modules/{module.Id}/activities")">
                                         <span class="bi bi-calendar-event"
                                               aria-hidden="true"></span>
@@ -144,7 +145,7 @@
                                 @if (isTeacher)
                                 {
                                     <td class="modules-actions-cell">
-                                        <a class="modules-edit-button"
+                                        <a class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                                            href="@($"/modules/edit/{module.Id}")">
                                             <span class="bi bi-pencil"
                                                   aria-hidden="true"></span>

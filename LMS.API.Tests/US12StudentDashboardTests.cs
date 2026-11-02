@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 
 namespace LMS.API.Tests;
 
@@ -33,5 +34,22 @@ public class US12StudentDashboardTests(ApiFactory factory) : ApiTestBase(factory
         var response = await Anonymous().GetAsync(Url);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Recent_feedback_names_the_assignment()
+    {
+        var teacher = await LoginAsync(Teacher);
+        var student = await LoginAsync(Student);
+        var assignmentId = await GetAssignmentIdAsync(Student);
+        var submissionId = await ReadIdAsync(await SubmitAsync(student, assignmentId));
+        await teacher.PostAsJsonAsync($"/api/submissions/{submissionId}/feedback", new { comment = "Well done.", grade = 9 });
+
+        var body = await ReadJsonAsync(await student.GetAsync(Url));
+        var feedback = body.GetProperty("recentFeedback").EnumerateArray()
+            .First(f => f.GetProperty("submissionId").GetInt32() == submissionId);
+
+        Assert.Equal(assignmentId, feedback.GetProperty("activityId").GetInt32());
+        Assert.False(string.IsNullOrEmpty(feedback.GetProperty("assignmentTitle").GetString()));
     }
 }

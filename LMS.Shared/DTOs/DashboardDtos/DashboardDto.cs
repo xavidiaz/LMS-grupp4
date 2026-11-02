@@ -46,6 +46,9 @@ public class DashboardFeedbackDto
 {
     public int Id { get; set; }
     public int SubmissionId { get; set; }
+    // Null for submissions that are not linked to an assignment
+    public int? ActivityId { get; set; }
+    public string? AssignmentTitle { get; set; }
     public string Comment { get; set; } = string.Empty;
     public decimal Grade { get; set; }
     public DateTime CreatedAt { get; set; }

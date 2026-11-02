@@ -23,6 +23,10 @@ public class DocumentService(IUnitOfWork uow, IMapper mapper, IConfiguration con
         mapper.Map<IEnumerable<DocumentDto>>(
                 await uow.DocumentRepository.GetByModuleIdAsync(moduleId));
 
+    public async Task<IEnumerable<DocumentDto>> GetByActivityIdAsync(int activityId) =>
+        mapper.Map<IEnumerable<DocumentDto>>(
+                await uow.DocumentRepository.GetByActivityIdAsync(activityId));
+
     public async Task<DocumentDto?> GetDocumentAsync(int id) =>
         mapper.Map<DocumentDto>(
                 await uow.DocumentRepository.GetByIdAsync(id));
@@ -30,6 +34,10 @@ public class DocumentService(IUnitOfWork uow, IMapper mapper, IConfiguration con
     public async Task<DocumentDto> UploadAsync(UploadDocumentDto dto, Stream content, string userId)
     {
         ValidateFile(dto);
+
+        if (dto.ActivityId is int activityId &&
+            await uow.ActivityRepository.GetByIdAsync(activityId) is null)
+            throw new NotFoundException($"Activity {activityId} not found.");
 
         var extension = Path.GetExtension(dto.FileName).ToLowerInvariant();
         var storageKey = $"{Guid.NewGuid()}{extension}";
@@ -44,6 +52,7 @@ public class DocumentService(IUnitOfWork uow, IMapper mapper, IConfiguration con
         {
             CourseId = dto.CourseId,
             ModuleId = dto.ModuleId,
+            ActivityId = dto.ActivityId,
             UploadAt = DateTime.UtcNow,
             UploadedById = userId,
             StoredFile = new StoredFile

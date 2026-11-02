@@ -59,26 +59,6 @@
                                        class="text-danger" />
                 </div>
 
-                <!-- NEW: ROLE SELECTION FOR DEMO -->
-                <div class="login-form-group">
-                    <label>Choose role (demo)</label>
-
-                    <InputRadioGroup @bind-Value="Input.SelectedRole"
-                                     class="login-role-options">
-
-                        <label class="login-role-choice">
-                            <InputRadio Value="@("Student")" />
-                            <span>Student</span>
-                        </label>
-
-                        <label class="login-role-choice">
-                            <InputRadio Value="@("Teacher")" />
-                            <span>Teacher</span>
-                        </label>
-
-                    </InputRadioGroup>
-                </div>
-
                 <div class="login-options">
                     <label class="remember-label">
                         <InputCheckbox @bind-Value="Input.RememberMe"
@@ -199,31 +179,6 @@
         accent-color: #355c47;
     }
 
-    /* NEW: ROLE SELECTION STYLING */
-    .login-role-options {
-        display: flex;
-        align-items: center;
-        gap: 24px;
-        margin-top: 8px;
-    }
-
-    .login-form-group .login-role-choice {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 0;
-        cursor: pointer;
-        color: #4f5851;
-        font-size: 0.95rem;
-        font-weight: 400;
-    }
-
-    .login-role-choice input {
-        width: 17px;
-        height: 17px;
-        accent-color: #355c47;
-    }
-
     .login-button {
         width: 100%;
         min-height: 52px;
@@ -332,9 +287,6 @@
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
-
-        // NEW: Demo role selection
-        public string SelectedRole { get; set; } = "Student";
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }

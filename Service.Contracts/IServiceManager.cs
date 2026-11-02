@@ -14,4 +14,5 @@ public interface IServiceManager
     IDashboardService DashboardService { get; }
     IActionTypeService ActionTypeService { get; }
     IActivityService ActivityService { get; }
+    ICourseAccessService CourseAccessService { get; }
 }

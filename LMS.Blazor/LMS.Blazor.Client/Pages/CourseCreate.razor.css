@@ -6,7 +6,7 @@
 .course-create-page {
     width: 100%;
     padding: 32px 36px 48px;
-    color: #202a25;
+    color: var(--color-text-strong);
 }
 
 /* PAGE HEADER */
@@ -25,12 +25,12 @@
     font-weight: 700;
     letter-spacing: -0.8px;
     line-height: 1.25;
-    color: #202824;
+    color: var(--color-text-strong);
 }
 
 .course-create-header-text p {
     margin: 0;
-    color: #7b8580;
+    color: var(--color-text-subtle);
     font-size: 14px;
     line-height: 1.6;
 }
@@ -39,11 +39,7 @@
 
 .course-create-card {
     width: 100%;
-    background: #ffffff;
-    border: 1px solid #e8ede9;
-    border-radius: 13px;
     overflow: hidden;
-    box-shadow: 0 3px 16px rgba(30, 50, 40, 0.035);
 }
 
 /* CARD HEADER */
@@ -54,12 +50,11 @@
     align-items: center;
     gap: 15px;
     padding: 23px 25px;
-    border-bottom: 1px solid #edf0ed;
 }
 
     .course-create-card-header h2 {
         margin: 0 0 6px;
-        color: #27332c;
+        color: var(--color-text);
         font-size: 17px;
         font-weight: 700;
         line-height: 1.3;
@@ -67,12 +62,12 @@
 
     .course-create-card-header p {
         margin: 0;
-        color: #929b95;
+        color: var(--color-text-faint);
         font-size: 12px;
     }
 
 .course-create-header-icon {
-    color: #87978c;
+    color: var(--color-text-faint);
     font-size: 19px;
 }
 
@@ -88,7 +83,7 @@
     .course-create-form ::deep label {
         display: block;
         margin-bottom: 9px;
-        color: #334238;
+        color: var(--color-text-secondary);
         font-size: 13px;
         font-weight: 600;
     }
@@ -98,10 +93,10 @@
         width: 100%;
         min-height: 44px;
         padding: 11px 14px;
-        border: 1px solid #dfe6e0;
+        border: 1px solid var(--color-border);
         border-radius: 8px;
-        background: #ffffff;
-        color: #334238;
+        background: var(--color-white);
+        color: var(--color-text-secondary);
         font-family: inherit;
         font-size: 13px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -109,18 +104,18 @@
 
         .course-create-form ::deep .form-control:hover,
         .course-create-form ::deep .form-select:hover {
-            border-color: #b9cbbd;
+            border-color: var(--color-border-strong);
         }
 
         .course-create-form ::deep .form-control:focus,
         .course-create-form ::deep .form-select:focus {
             outline: none;
-            border-color: #658b70;
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 3px rgba(101, 139, 112, 0.12);
         }
 
         .course-create-form ::deep .form-control::placeholder {
-            color: #a1aba4;
+            color: var(--color-text-faint);
         }
 
     .course-create-form ::deep textarea.form-control {
@@ -139,17 +134,17 @@
     .course-create-form ::deep .validation-message {
         display: block;
         margin-top: 6px;
-        color: #b7524b;
+        color: var(--color-danger-accent);
         font-size: 12px;
     }
 
     .course-create-form ::deep .validation-summary-errors {
         margin-bottom: 20px;
         padding: 14px 16px;
-        border: 1px solid #f3d6d3;
+        border: 1px solid var(--color-danger-border);
         border-radius: 8px;
-        background: #fff2f1;
-        color: #a13d38;
+        background: var(--color-danger-soft);
+        color: var(--color-danger-muted);
         font-size: 13px;
     }
 
@@ -158,7 +153,7 @@
     }
 
     .course-create-form ::deep .form-control.invalid {
-        border-color: #d3817a;
+        border-color: var(--color-danger-light);
     }
 
     /* SUBMIT BUTTON */
@@ -170,10 +165,10 @@
         gap: 9px;
         min-height: 40px;
         padding: 10px 18px;
-        border: 1px solid #233e32;
+        border: 1px solid var(--color-primary-dark);
         border-radius: 8px;
-        background: #233e32;
-        color: #ffffff;
+        background: var(--color-primary-dark);
+        color: var(--color-white);
         font-family: inherit;
         font-size: 13px;
         font-weight: 600;
@@ -182,9 +177,9 @@
     }
 
         .course-create-form ::deep button[type="submit"]:hover:not(:disabled) {
-            background: #315645;
-            border-color: #315645;
-            color: #ffffff;
+            background: var(--color-primary-hover);
+            border-color: var(--color-primary-hover);
+            color: var(--color-white);
         }
 
         .course-create-form ::deep button[type="submit"]:disabled {
@@ -193,7 +188,7 @@
         }
 
         .course-create-form ::deep button[type="submit"]:focus-visible {
-            outline: 3px solid #9bc9b0;
+            outline: 3px solid var(--color-accent-light);
             outline-offset: 3px;
         }
 
@@ -204,13 +199,6 @@
     align-items: flex-start;
     gap: 10px;
     margin: 20px 24px;
-    padding: 14px 16px;
-    border: 1px solid #f3d6d3;
-    border-radius: 8px;
-    background: #fff2f1;
-    color: #a13d38;
-    font-size: 13px;
-    line-height: 1.6;
 }
 
 /* RESPONSIVE */

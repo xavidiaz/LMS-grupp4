@@ -5,6 +5,7 @@ using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.Activity;
 using LMS.Shared.DTOs.AssignmentDtos;
 using LMS.Shared.Paging;
+using Microsoft.EntityFrameworkCore;
 using Service.Contracts;
 using System;
 using System.Collections.Generic;
@@ -154,7 +155,17 @@ namespace LMS.Services
 
             _uow.ActivityRepository.Delete(activityEntity);
 
-            await _uow.CompleteAsync();
+            // Submissions and documents keep the activity (NoAction on delete)
+            try
+            {
+                await _uow.CompleteAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new DeleteActivityException(
+                    "Cannot delete this activity because submissions or documents are still associated with it.",
+                    ex);
+            }
         }
 
         private async Task CheckModuleExistsAsync(int moduleId)

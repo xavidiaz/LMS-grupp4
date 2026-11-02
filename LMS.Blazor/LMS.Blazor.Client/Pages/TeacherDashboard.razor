@@ -70,7 +70,7 @@
     }
     else if (dashboard is null)
     {
-        <section class="dashboard-card">
+        <section class="card dashboard-card">
             <div class="empty-state">
                 <span class="empty-icon">!</span>
                 <strong>Dashboard unavailable</strong>
@@ -88,7 +88,7 @@
             <!-- CURRENT COURSES -->
 
             <a href="#teacher-courses"
-               class="teacher-summary-card summary-courses">
+               class="card teacher-summary-card summary-courses">
 
                 <span class="teacher-summary-icon"
                       aria-hidden="true">
@@ -119,7 +119,7 @@
             <!-- UPCOMING ACTIVITIES -->
 
             <a href="#teacher-activities"
-               class="teacher-summary-card summary-activities">
+               class="card teacher-summary-card summary-activities">
 
                 <span class="teacher-summary-icon"
                       aria-hidden="true">
@@ -150,7 +150,7 @@
             <!-- SUBMISSIONS -->
 
             <a href="#teacher-submissions"
-               class="teacher-summary-card summary-submissions">
+               class="card teacher-summary-card summary-submissions">
 
                 <span class="teacher-summary-icon"
                       aria-hidden="true">
@@ -181,7 +181,7 @@
             <!-- PENDING FEEDBACK -->
 
             <a href="#teacher-feedback"
-               class="teacher-summary-card summary-feedback">
+               class="card teacher-summary-card summary-feedback">
 
                 <span class="teacher-summary-icon"
                       aria-hidden="true">
@@ -217,10 +217,10 @@
 
             <!-- CURRENT COURSES -->
 
-            <section class="dashboard-card"
+            <section class="card dashboard-card"
                      id="teacher-courses">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
 
                     <div class="panel-title">
                         <span class="panel-icon panel-icon-courses"
@@ -295,10 +295,10 @@
 
             <!-- UPCOMING ACTIVITIES -->
 
-            <section class="dashboard-card"
+            <section class="card dashboard-card"
                      id="teacher-activities">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
 
                     <div class="panel-title">
                         <span class="panel-icon panel-icon-activities"
@@ -374,10 +374,10 @@
 
             <!-- SUBMISSIONS -->
 
-            <section class="dashboard-card"
+            <section class="card dashboard-card"
                      id="teacher-submissions">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
 
                     <div class="panel-title">
                         <span class="panel-icon panel-icon-submissions"
@@ -429,7 +429,7 @@
 
                                 </div>
 
-                                <span class="status-label @GetStatusClass(submission.Status)">
+                                <span class="badge status-label @GetStatusClass(submission.Status)">
                                     @submission.Status
                                 </span>
 
@@ -448,10 +448,10 @@
 
             <!-- PENDING FEEDBACK -->
 
-            <section class="dashboard-card"
+            <section class="card dashboard-card"
                      id="teacher-feedback">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
 
                     <div class="panel-title">
                         <span class="panel-icon panel-icon-feedback"
@@ -520,10 +520,10 @@
 
         <!-- RECENT ACTIVITY -->
 
-        <section class="dashboard-card teacher-recent-card"
+        <section class="card dashboard-card teacher-recent-card"
                  id="teacher-recent">
 
-            <div class="dashboard-card-header">
+            <div class="card-header dashboard-card-header">
 
                 <div class="panel-title">
                     <span class="panel-icon panel-icon-recent"

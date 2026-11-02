@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Domain.Contracts;
+using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.ActionType;
 using LMS.Shared.DTOs.Activity;
 using LMS.Shared.Paging;
@@ -29,6 +30,13 @@ namespace LMS.Services
         public async Task<ActionTypeDto?> GetByActivityIdAsync(int activityId, bool trackChanges = false)
         {
             var actionType = await _uow.ActionTypeRepository.GetByActivityIdAsync(activityId, trackChanges);
+
+            if (actionType is null)
+            {
+                throw new NotFoundException(
+                    $"Action type for activity {activityId} not found.");
+            }
+
             return _mapper.Map<ActionTypeDto>(actionType);
         }
     }

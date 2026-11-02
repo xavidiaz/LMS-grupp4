@@ -27,7 +27,7 @@
 
     @if (isLoading)
     {
-        <div class="create-activity-card">
+        <div class="card create-activity-card">
             <div class="create-activity-state">
 
                 <div class="spinner-border create-activity-spinner"
@@ -43,9 +43,9 @@
     }
     else if (module is null)
     {
-        <div class="create-activity-card">
+        <div class="card create-activity-card">
 
-            <div class="create-activity-error" role="alert">
+            <div class="alert alert-danger create-activity-error" role="alert">
                 <span class="bi bi-exclamation-circle"
                       aria-hidden="true"></span>
                 <span>
@@ -54,7 +54,7 @@
             </div>
 
             <div class="create-activity-footer">
-                <a class="create-activity-cancel-button"
+                <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                    href="/courses">
                     <span class="bi bi-arrow-left"
                           aria-hidden="true"></span>
@@ -66,10 +66,10 @@
     }
     else
     {
-        <div class="create-activity-card">
+        <div class="card create-activity-card">
 
             <!-- CARD HEADER -->
-            <div class="create-activity-card-header">
+            <div class="card-header create-activity-card-header">
                 <div>
                     <h2>Activity Information</h2>
                     <p>Enter the details for the new activity below.</p>
@@ -81,7 +81,7 @@
 
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                <div class="create-activity-error" role="alert">
+                <div class="alert alert-danger create-activity-error" role="alert">
                     <span class="bi bi-exclamation-circle"
                           aria-hidden="true"></span>
                     <span>@errorMessage</span>
@@ -100,15 +100,78 @@
                         <ValidationSummary />
                     </div>
 
-                    <!-- ACTIVITY TYPE -->
-                    <div class="create-activity-field">
+                    <!-- MODULE INFORMATION -->
+                    <div class="create-activity-info">
 
-                        <label for="activityType">
+                        <span class="create-activity-info-icon bi bi-info-circle"
+                              aria-hidden="true"></span>
+
+                        <div>
+                            <strong>@module.Name</strong>
+
+                            <p class="create-activity-period">
+                                @module.StartDate.ToString("yyyy-MM-dd")
+                                –
+                                @module.EndDate.ToString("yyyy-MM-dd")
+                            </p>
+
+                            <p>
+                                The activity must be scheduled within this
+                                period and must not overlap another activity
+                                in the module.
+                            </p>
+
+                            <div class="create-activity-periods">
+                                <div>
+                                    <strong>Booked</strong>
+
+                                    @if (bookedActivities.Count == 0)
+                                    {
+                                        <p>No activities created yet.</p>
+                                    }
+
+                                    @foreach (var booked in bookedActivities)
+                                    {
+                                        <p @key="booked.Id">
+                                            @booked.Title:
+                                            @booked.StartDate.ToString("yyyy-MM-dd HH:mm")
+                                            –
+                                            @booked.EndDate.ToString("yyyy-MM-dd HH:mm")
+                                        </p>
+                                    }
+                                </div>
+
+                                <div>
+                                    <strong>Available</strong>
+
+                                    @if (availablePeriods.Count == 0)
+                                    {
+                                        <p>No available dates</p>
+                                    }
+
+                                    @foreach (var period in availablePeriods)
+                                    {
+                                        <p @key="period.Start">
+                                            @period.Start.ToString("yyyy-MM-dd HH:mm")
+                                            –
+                                            @period.End.ToString("yyyy-MM-dd HH:mm")
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ACTIVITY TYPE -->
+                    <div>
+
+                        <label class="form-label" for="activityType">
                             Activity Type
                         </label>
 
                         <InputSelect id="activityType"
-                                     class="create-activity-input"
+                                     class="form-select"
                                      @bind-Value="activity.ActionTypeId">
 
                             <option value="0">
@@ -130,14 +193,14 @@
                     </div>
 
                     <!-- TITLE -->
-                    <div class="create-activity-field">
+                    <div>
 
-                        <label for="activityTitle">
+                        <label class="form-label" for="activityTitle">
                             Title
                         </label>
 
                         <InputText id="activityTitle"
-                                   class="create-activity-input"
+                                   class="form-control"
                                    @bind-Value="activity.Title"
                                    placeholder="Enter activity title" />
 
@@ -147,14 +210,14 @@
                     </div>
 
                     <!-- DESCRIPTION -->
-                    <div class="create-activity-field">
+                    <div>
 
-                        <label for="activityDescription">
+                        <label class="form-label" for="activityDescription">
                             Description
                         </label>
 
                         <InputTextArea id="activityDescription"
-                                       class="create-activity-input create-activity-textarea"
+                                       class="form-control"
                                        @bind-Value="activity.Description"
                                        rows="4"
                                        placeholder="Describe the activity" />
@@ -165,16 +228,16 @@
                     </div>
 
                     <!-- DATE AND TIME -->
-                    <div class="create-activity-date-grid">
+                    <div class="row g-4">
 
-                        <div class="create-activity-field">
+                        <div class="col-md-6">
 
-                            <label for="activityStart">
+                            <label class="form-label" for="activityStart">
                                 Start Time
                             </label>
 
                             <InputDate id="activityStart"
-                                       class="create-activity-input"
+                                       class="form-control"
                                        Type="InputDateType.DateTimeLocal"
                                        @bind-Value="activity.StartDate" />
 
@@ -183,14 +246,14 @@
 
                         </div>
 
-                        <div class="create-activity-field">
+                        <div class="col-md-6">
 
-                            <label for="activityEnd">
+                            <label class="form-label" for="activityEnd">
                                 End Time
                             </label>
 
                             <InputDate id="activityEnd"
-                                       class="create-activity-input"
+                                       class="form-control"
                                        Type="InputDateType.DateTimeLocal"
                                        @bind-Value="activity.EndDate" />
 
@@ -201,42 +264,18 @@
 
                     </div>
 
-                    <!-- MODULE PERIOD INFO -->
-                    <div class="create-activity-info">
-
-                        <span class="create-activity-info-icon bi bi-info-circle"
-                              aria-hidden="true"></span>
-
-                        <div>
-                            <strong>Module Period</strong>
-
-                            <p class="create-activity-period">
-                                @module.StartDate.ToString("yyyy-MM-dd")
-                                –
-                                @module.EndDate.ToString("yyyy-MM-dd")
-                            </p>
-
-                            <p>
-                                The activity must be scheduled within this
-                                period and must not overlap another activity
-                                in the module.
-                            </p>
-                        </div>
-
-                    </div>
-
                 </div>
 
                 <!-- FORM FOOTER -->
                 <div class="create-activity-footer">
 
-                    <a class="create-activity-cancel-button"
+                    <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                        href="@($"/modules/{ModuleId}/activities")">
                         Cancel
                     </a>
 
                     <button type="submit"
-                            class="create-activity-save-button"
+                            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
                             disabled="@isSaving">
 
                         @if (isSaving)
@@ -270,9 +309,15 @@
     [Parameter]
     public int ModuleId { get; set; }
 
+    private sealed record DatePeriod(DateTime Start, DateTime End);
+
+    private static readonly TimeSpan DefaultDuration = TimeSpan.FromHours(1);
+
     private CreateActivityDto activity = new();
     private ModuleDto? module;
     private List<ActionTypeDto> actionTypes = new();
+    private List<ActivityDto> bookedActivities = [];
+    private List<DatePeriod> availablePeriods = [];
 
     private bool isLoading = true;
     private bool isSaving;
@@ -307,6 +352,27 @@
                 return;
             }
 
+            // Load booked activities, 100 is the API's largest page size
+            var activitiesResponse = await ApiProxyClient
+                .GetAsync<PagedResponse<ActivityDto>>(
+                    $"Activity/module/{ModuleId}?PageNumber=1&PageSize=100");
+
+            bookedActivities = activitiesResponse?.Items
+                .OrderBy(a => a.StartDate)
+                .ThenBy(a => a.Id)
+                .ToList() ?? [];
+
+            availablePeriods =
+                GetAvailablePeriods(module, bookedActivities);
+
+            var defaultPeriod = availablePeriods.FirstOrDefault()
+                ?? new DatePeriod(module.StartDate, module.EndDate);
+
+            activity.StartDate = defaultPeriod.Start;
+            activity.EndDate = defaultPeriod.Start + DefaultDuration < defaultPeriod.End
+                ? defaultPeriod.Start + DefaultDuration
+                : defaultPeriod.End;
+
             // Load action types from the paginated API response
             var response = await ApiProxyClient
                 .GetAsync<PagedResponse<ActionTypeDto>>("ActionType");
@@ -327,12 +393,47 @@
         }
         catch (Exception ex)
         {
+            // Without this data the form would show invalid defaults
+            module = null;
             errorMessage = ex.Message;
         }
         finally
         {
             isLoading = false;
         }
+    }
+
+    // Expects activities sorted by start time.
+    private static List<DatePeriod> GetAvailablePeriods(
+        ModuleDto module,
+        List<ActivityDto> activities)
+    {
+        var periods = new List<DatePeriod>();
+        var nextFree = module.StartDate;
+
+        foreach (var booked in activities)
+        {
+            var lastFree = booked.StartDate < module.EndDate
+                ? booked.StartDate
+                : module.EndDate;
+
+            if (nextFree < lastFree)
+            {
+                periods.Add(new DatePeriod(nextFree, lastFree));
+            }
+
+            if (booked.EndDate > nextFree)
+            {
+                nextFree = booked.EndDate;
+            }
+        }
+
+        if (nextFree < module.EndDate)
+        {
+            periods.Add(new DatePeriod(nextFree, module.EndDate));
+        }
+
+        return periods;
     }
 
     private async Task Create()

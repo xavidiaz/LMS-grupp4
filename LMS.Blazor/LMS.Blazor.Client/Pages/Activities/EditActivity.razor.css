@@ -6,7 +6,7 @@
 .edit-activity-page {
     width: 100%;
     padding: 32px 36px 48px;
-    color: #202a25;
+    color: var(--color-text-strong);
 }
 
 /* PAGE HEADER */
@@ -25,25 +25,21 @@
     font-weight: 700;
     letter-spacing: -0.8px;
     line-height: 1.25;
-    color: #202824;
+    color: var(--color-text-strong);
 }
 
 .edit-activity-header-text p {
     margin: 0;
     font-size: 14px;
     line-height: 1.6;
-    color: #7b8580;
+    color: var(--color-text-subtle);
 }
 
 /* MAIN CARD */
 
 .edit-activity-card {
     width: 100%;
-    background: #ffffff;
-    border: 1px solid #e8ede9;
-    border-radius: 13px;
     overflow: hidden;
-    box-shadow: 0 3px 16px rgba(30, 50, 40, 0.035);
 }
 
 /* CARD HEADER */
@@ -54,7 +50,6 @@
     align-items: center;
     gap: 15px;
     padding: 23px 25px;
-    border-bottom: 1px solid #edf0ed;
 }
 
     .edit-activity-card-header h2 {
@@ -62,17 +57,17 @@
         font-size: 17px;
         line-height: 1.3;
         font-weight: 700;
-        color: #27332c;
+        color: var(--color-text);
     }
 
     .edit-activity-card-header p {
         margin: 0;
-        color: #929b95;
+        color: var(--color-text-faint);
         font-size: 12px;
     }
 
 .edit-activity-header-icon {
-    color: #87978c;
+    color: var(--color-text-faint);
     font-size: 19px;
 }
 
@@ -85,70 +80,12 @@
     padding: 28px 30px 32px;
 }
 
-.edit-activity-field {
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-}
-
-    .edit-activity-field label {
-        color: #334238;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    /* INPUT FIELDS */
-
-    .edit-activity-field ::deep .edit-activity-input {
-        display: block;
-        width: 100%;
-        min-height: 44px;
-        padding: 11px 14px;
-        border: 1px solid #dfe6e0;
-        border-radius: 8px;
-        background: #ffffff;
-        color: #334238;
-        font-family: inherit;
-        font-size: 13px;
-        line-height: 1.5;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .edit-activity-field ::deep .edit-activity-input:hover {
-            border-color: #b9cbbd;
-        }
-
-        .edit-activity-field ::deep .edit-activity-input:focus {
-            outline: none;
-            border-color: #658b70;
-            box-shadow: 0 0 0 3px rgba(101, 139, 112, 0.12);
-        }
-
-        .edit-activity-field ::deep .edit-activity-input::placeholder {
-            color: #a1aba4;
-        }
-
-    /* DESCRIPTION */
-
-    .edit-activity-field ::deep .edit-activity-textarea {
-        min-height: 110px;
-        resize: vertical;
-    }
-
-/* DATE AND TIME */
-
-.edit-activity-date-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 22px;
-}
-
 /* VALIDATION */
 
 .edit-activity-validation ::deep .validation-summary-errors {
-    border: 1px solid #f3d6d3;
-    background: #fff2f1;
-    color: #a13d38;
+    border: 1px solid var(--color-danger-border);
+    background: var(--color-danger-soft);
+    color: var(--color-danger-muted);
     border-radius: 8px;
     padding: 14px 16px;
     font-size: 13px;
@@ -159,15 +96,6 @@
         padding-left: 20px;
     }
 
-.edit-activity-field ::deep .validation-message {
-    color: #b7524b;
-    font-size: 12px;
-}
-
-.edit-activity-field ::deep .edit-activity-input.invalid {
-    border-color: #d3817a;
-}
-
 /* FORM FOOTER */
 
 .edit-activity-footer {
@@ -177,59 +105,9 @@
     flex-wrap: wrap;
     gap: 12px;
     padding: 20px 30px;
-    border-top: 1px solid #edf0ed;
-    background: #ffffff;
+    border-top: 1px solid var(--color-border-light);
+    background: var(--color-white);
 }
-
-/* BUTTONS */
-
-.edit-activity-save-button,
-.edit-activity-cancel-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    min-height: 40px;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-/* SAVE BUTTON */
-
-.edit-activity-save-button {
-    border: 1px solid #233e32;
-    background: #233e32;
-    color: #ffffff;
-}
-
-    .edit-activity-save-button:hover:not(:disabled) {
-        background: #315645;
-        border-color: #315645;
-    }
-
-    .edit-activity-save-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-/* CANCEL BUTTON */
-
-.edit-activity-cancel-button {
-    border: 1px solid #dfe7e0;
-    background: #ffffff;
-    color: #58685d;
-}
-
-    .edit-activity-cancel-button:hover {
-        background: #edf3ee;
-        color: #304a36;
-    }
 
 /* ERROR MESSAGE */
 
@@ -238,13 +116,6 @@
     align-items: flex-start;
     gap: 10px;
     margin: 20px 24px;
-    padding: 14px 16px;
-    border: 1px solid #f3d6d3;
-    border-radius: 8px;
-    background: #fff2f1;
-    color: #a13d38;
-    font-size: 13px;
-    line-height: 1.6;
 }
 
 /* LOADING STATE */
@@ -261,14 +132,14 @@
 }
 
     .edit-activity-state strong {
-        color: #37443b;
+        color: var(--color-text-secondary);
         font-size: 14px;
         font-weight: 700;
     }
 
     .edit-activity-state p {
         margin: 0;
-        color: #909b93;
+        color: var(--color-text-faint);
         font-size: 13px;
         line-height: 1.6;
     }
@@ -277,15 +148,7 @@
     width: 30px;
     height: 30px;
     margin-bottom: 10px;
-    color: #416a50;
-}
-
-/* ACCESSIBILITY */
-
-.edit-activity-save-button:focus-visible,
-.edit-activity-cancel-button:focus-visible {
-    outline: 3px solid #9bc9b0;
-    outline-offset: 3px;
+    color: var(--color-primary-light);
 }
 
 /* RESPONSIVE */
@@ -311,11 +174,6 @@
         padding: 22px 18px;
     }
 
-    .edit-activity-date-grid {
-        grid-template-columns: 1fr;
-        gap: 22px;
-    }
-
     .edit-activity-footer {
         padding: 18px;
     }
@@ -325,10 +183,5 @@
     .edit-activity-footer {
         flex-direction: column-reverse;
         align-items: stretch;
-    }
-
-    .edit-activity-save-button,
-    .edit-activity-cancel-button {
-        width: 100%;
     }
 }

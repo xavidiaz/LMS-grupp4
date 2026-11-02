@@ -217,4 +217,19 @@ public class US05ActivitiesTests(ApiFactory factory) : ApiTestBase(factory)
         Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, second.StatusCode);
     }
+
+    [Fact]
+    public async Task Deleting_activity_with_submissions_returns_409_and_keeps_it()
+    {
+        var teacher = await LoginAsync(Teacher);
+        var student = await LoginAsync(Student);
+        var activityId = await GetAssignmentIdAsync(Student);
+        await SubmitAsync(student, activityId);
+
+        var delete = await teacher.DeleteAsync($"/api/Activity/{activityId}");
+        var afterwards = await teacher.GetAsync($"/api/Activity/{activityId}");
+
+        Assert.Equal(HttpStatusCode.Conflict, delete.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, afterwards.StatusCode);
+    }
 }

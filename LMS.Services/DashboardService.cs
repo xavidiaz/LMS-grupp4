@@ -124,6 +124,10 @@ public class DashboardService : IDashboardService
             {
                 Id = f.Id,
                 SubmissionId = f.SubmissionId,
+                ActivityId = f.Submission.ActivityId,
+                AssignmentTitle = f.Submission.Activity != null
+                    ? f.Submission.Activity.Title
+                    : null,
                 Comment = f.Comment,
                 Grade = f.Grade,
                 CreatedAt = f.CreatedAt

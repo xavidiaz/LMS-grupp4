@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace LMS.API.Services;
 
 // Development test data used by DataSeedService.
@@ -25,17 +27,30 @@ internal static class SeedData
         ("David.Lind@Lms.com", "David", "Lind", "COURSE-C"),
     ];
 
+    // Students with a submission to the first assignment in their course.
+    // Student@Lms.com has none, so the demo can show a live upload.
+    public static readonly (string Email, bool WithFeedback)[] SubmittingStudents =
+    [
+        ("Erik.Johansson@Lms.com", true),
+        ("Sara.Nilsson@Lms.com", false),
+        ("Lina.Berg@Lms.com", true),
+        ("Student2@Lms.com", false),
+        ("Maria.Garcia@Lms.com", true),
+    ];
+
     public static List<Course> Courses()
     {
-        var start = DateTime.Today;
+        // A week in, so the first assignment is open and classmates have submitted
+        var start = DateTime.Today.AddDays(-7);
 
         return
         [
+            // Two free weeks at the end, so a module can be created in the demo
             CreateCourse("Course A", "COURSE-A", ".NET Fullstack", start,
-                ["C# Basics", "Databases & EF Core", "ASP.NET Core API", "Blazor"]),
+                ["C# Basics", "Databases & EF Core", "ASP.NET Core API", "Blazor"], freeWeeks: 2),
             CreateCourse("Course B", "COURSE-B", "Frontend Development", start,
                 ["HTML & CSS", "JavaScript", "React"]),
-            CreateCourse("Course C", "COURSE-C", "Cloud & DevOps", start.AddMonths(-1),
+            CreateCourse("Course C", "COURSE-C", "Cloud & DevOps", DateTime.Today.AddMonths(-1),
                 ["Git & GitHub", "Azure", "CI/CD"]),
         ];
     }
@@ -65,50 +80,72 @@ internal static class SeedData
             activities.Add(CreateActivity(module, types[2], $"{module.Name} - Exercises",
                 day.AddDays(2).AddHours(13), day.AddDays(2).AddHours(16)));
             activities.Add(CreateActivity(module, types[3], $"{module.Name} - Assignment",
-                day.AddHours(9), module.EndDate.AddHours(-7)));
+                day.AddDays(3).AddHours(9), module.EndDate.AddHours(-7)));
         }
 
         return activities;
     }
 
-    // Metadata only, the files do not exist on disk.
+    // DataSeedService writes FileContent(FileName) to each StorageKey.
     public static List<Document> Documents(List<Course> courses, string teacherId)
     {
         var documents = new List<Document>();
 
         foreach (var course in courses)
         {
-            documents.Add(new Document
-            {
-                Course = course,
-                StoredFile = new StoredFile
-                {
-                    FileName = $"{course.Code}-schedule.pdf",
-                    ContentType = "application/pdf",
-                    StorageKey = $"uploads/seed/{course.Code}-schedule.pdf",
-                },
-                UploadAt = DateTime.Now.AddDays(-7),
-                UploadedById = teacherId
-            });
+            documents.Add(CreateDocument(
+                course, null, $"{course.Code}-schedule.pdf",
+                $"seed/{course.Code}-schedule.pdf",
+                course.StartDate.AddDays(-7), teacherId));
 
             foreach (var module in course.Modules)
             {
-                documents.Add(new Document
-                {
-                    Module = module,
-                    StoredFile = new StoredFile
-                    {
-                        FileName = $"{module.Name}-slides.pptx",
-                        ContentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                        StorageKey = $"uploads/seed/{course.Code}-{module.Id}-slides.pptx",
-                    },
-                    UploadAt = module.StartDate.AddDays(-1),
-                    UploadedById = teacherId
-                });
+                documents.Add(CreateDocument(
+                    null, module, $"{module.Name}-slides.pdf",
+                    $"seed/{course.Code}-{module.Id}-slides.pdf",
+                    module.StartDate.AddDays(-1), teacherId));
             }
         }
 
         return documents;
+    }
+
+    // A one-page PDF that shows the file name, so downloads open in a viewer.
+    public static byte[] FileContent(string fileName)
+    {
+        var text = fileName.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
+        var content = $"BT /F1 18 Tf 72 720 Td ({text}) Tj ET";
+
+        string[] objects =
+        [
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            $"<< /Length {content.Length} >>\nstream\n{content}\nendstream",
+        ];
+
+        // ASCII only, so the string length equals the byte offset
+        var pdf = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+
+        for (var i = 0; i < objects.Length; i++)
+        {
+            offsets.Add(pdf.Length);
+            pdf.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+
+        var xref = pdf.Length;
+        pdf.Append($"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
+
+        foreach (var offset in offsets)
+        {
+            pdf.Append($"{offset:D10} 00000 n \n");
+        }
+
+        pdf.Append($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+
+        return Encoding.ASCII.GetBytes(pdf.ToString());
     }
 
     public static List<Notification> Notifications(List<ApplicationUser> students)
@@ -136,25 +173,70 @@ internal static class SeedData
         return notifications;
     }
 
-    // One graded submission per student. Submission has no ActivityId yet.
-    public static List<FeedBack> SubmissionsWithFeedback(List<ApplicationUser> students, string teacherId)
+    // A submission to the first assignment in the student's course, submitted
+    // on time. Feedback comes from the course teacher, or the first teacher.
+    public static (List<Submission> Submissions, List<FeedBack> Feedbacks) SubmissionsWithFeedback(
+        List<ApplicationUser> students, List<ApplicationUser> teachers, List<Activity> activities)
     {
-        return students.Select(student => new FeedBack
+        var submissions = new List<Submission>();
+        var feedbacks = new List<FeedBack>();
+
+        foreach (var (email, withFeedback) in SubmittingStudents)
         {
-            Submission = new Submission
+            var student = students.Single(s => s.Email == email);
+            var assignment = activities
+                .Where(a => a.Module!.CourseId == student.CourseId && a.ActionType.Name == "Assignment")
+                .OrderBy(a => a.StartDate)
+                .First();
+
+            var submittedAt = Min(DateTime.Now.AddDays(-1), assignment.EndDate.AddDays(-1));
+            var submission = new Submission
             {
                 UserId = student.Id,
-                FileName = "intro-assignment.docx",
-                FilePath = $"uploads/seed/{student.Id}-intro-assignment.docx",
-                SubmittedAt = DateTime.Now.AddDays(-2),
+                Activity = assignment,
+                FileName = "assignment-answer.pdf",
+                FilePath = $"seed/{student.Id}-assignment-answer.pdf",
+                SubmittedAt = submittedAt,
                 Status = SubmissionStatus.Submitted
-            },
-            UserId = teacherId,
-            Comment = "Good work, clear structure.",
-            Grade = 4,
-            CreatedAt = DateTime.Now.AddDays(-1)
-        }).ToList();
+            };
+            submissions.Add(submission);
+
+            if (withFeedback)
+            {
+                var teacher = teachers.FirstOrDefault(t => t.CourseId == student.CourseId) ?? teachers[0];
+
+                feedbacks.Add(new FeedBack
+                {
+                    Submission = submission,
+                    UserId = teacher.Id,
+                    Comment = "Good work, clear structure.",
+                    Grade = 4,
+                    CreatedAt = submittedAt.AddHours(20)
+                });
+            }
+        }
+
+        return (submissions, feedbacks);
     }
+
+    private static DateTime Min(DateTime a, DateTime b) => a < b ? a : b;
+
+    private static Document CreateDocument(
+        Course? course, Module? module, string fileName, string storageKey,
+        DateTime uploadAt, string teacherId) => new()
+        {
+            Course = course,
+            Module = module,
+            StoredFile = new StoredFile
+            {
+                FileName = fileName,
+                ContentType = "application/pdf",
+                StorageKey = storageKey,
+                Size = FileContent(fileName).Length
+            },
+            UploadAt = uploadAt,
+            UploadedById = teacherId
+        };
 
     private static Activity CreateActivity(
         Module module, ActionType type, string title, DateTime start, DateTime end) => new()
@@ -167,9 +249,11 @@ internal static class SeedData
             EndDate = end
         };
 
-    // Each module is two weeks long, one after another.
+    // Each module is two weeks long, one after another. freeWeeks are left
+    // without modules at the end of the course.
     private static Course CreateCourse(
-        string name, string code, string description, DateTime start, string[] moduleNames)
+        string name, string code, string description, DateTime start, string[] moduleNames,
+        int freeWeeks = 0)
     {
         var course = new Course
         {
@@ -177,7 +261,7 @@ internal static class SeedData
             Code = code,
             Description = description,
             StartDate = start,
-            EndDate = start.AddDays(14 * moduleNames.Length)
+            EndDate = start.AddDays(14 * moduleNames.Length + 7 * freeWeeks)
         };
 
         for (int i = 0; i < moduleNames.Length; i++)

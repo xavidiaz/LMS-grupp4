@@ -26,7 +26,7 @@
 
         @if (isTeacher)
         {
-            <a class="activities-add-button"
+            <a class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
                href="@($"/activities/create/{ModuleId}")">
                 <span class="bi bi-plus-circle"
                       aria-hidden="true"></span>
@@ -36,9 +36,9 @@
     </header>
 
     <!-- MAIN CARD -->
-    <section class="activities-card">
+    <section class="card activities-card">
 
-        <div class="activities-card-header">
+        <div class="card-header activities-card-header">
             <div>
                 <h2>All Activities</h2>
 
@@ -64,7 +64,7 @@
 
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
-            <div class="activities-error" role="alert">
+            <div class="alert alert-danger activities-error" role="alert">
                 <span class="bi bi-exclamation-circle"
                       aria-hidden="true"></span>
                 <span>@errorMessage</span>
@@ -99,9 +99,9 @@
         }
         else if (activities.Count > 0)
         {
-            <div class="activities-table-wrapper">
-                <table class="activities-table">
-                    <thead>
+            <div class="table-responsive activities-table-wrapper">
+                <table class="table table-hover align-middle mb-0 activities-table">
+                    <thead class="table-light">
                         <tr>
                             <th>ACTIVITY TYPE</th>
                             <th>TITLE</th>
@@ -123,15 +123,16 @@
                         {
                             <tr @key="activity.Id">
                                 <td>
-                                    <span class="activities-type-badge">
+                                    <span class="badge activities-type-badge">
                                         @(activity.ActionTypeName ?? "Unknown")
                                     </span>
                                 </td>
 
                                 <td>
-                                    <span class="activities-title">
+                                    <a class="activities-title"
+                                       href="@($"/activities/{activity.Id}")">
                                         @activity.Title
-                                    </span>
+                                    </a>
                                 </td>
 
                                 <td>
@@ -153,7 +154,7 @@
                                     <td class="activities-actions-cell">
                                         <div class="activities-actions">
 
-                                            <a class="activities-edit-button"
+                                            <a class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                                                href="@($"/activities/edit/{activity.Id}")">
                                                 <span class="bi bi-pencil"
                                                       aria-hidden="true"></span>
@@ -161,7 +162,7 @@
                                             </a>
 
                                             <button type="button"
-                                                    class="activities-delete-button"
+                                                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-2"
                                                     disabled="@isDeleting"
                                                     @onclick="() => OpenDeleteDialog(activity.Id, activity.Title)">
                                                 <span class="bi bi-trash"
@@ -184,7 +185,7 @@
                 <div class="activities-pagination">
 
                     <button type="button"
-                            class="activities-page-button"
+                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                             disabled="@(!pagedResponse.HasPreviousPage)"
                             @onclick="PreviousPage">
                         <span class="bi bi-chevron-left"
@@ -198,7 +199,7 @@
                     </span>
 
                     <button type="button"
-                            class="activities-page-button"
+                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                             disabled="@(!pagedResponse.HasNextPage)"
                             @onclick="NextPage">
                         Next
@@ -216,7 +217,7 @@
     @if (courseId.HasValue)
     {
         <div class="activities-footer">
-            <a class="activities-back-button"
+            <a class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                href="@($"/courses/{courseId.Value}/modules")">
                 <span class="bi bi-arrow-left"
                       aria-hidden="true"></span>
@@ -230,15 +231,15 @@
 <!-- DELETE CONFIRMATION DIALOG -->
 @if (showDeleteDialog && isTeacher)
 {
-    <div class="activities-dialog-overlay">
+    <div class="modal d-flex align-items-center justify-content-center activities-dialog-overlay">
 
-        <div class="activities-dialog"
+        <div class="modal-content activities-dialog"
              role="dialog"
              aria-modal="true"
              aria-labelledby="deleteActivityTitle"
              aria-describedby="deleteActivityDescription">
 
-            <div class="activities-dialog-header">
+            <div class="modal-header activities-dialog-header">
 
                 <span class="activities-dialog-icon bi bi-trash"
                       aria-hidden="true"></span>
@@ -253,7 +254,7 @@
 
             </div>
 
-            <div class="activities-dialog-body">
+            <div class="modal-body activities-dialog-body">
 
                 <p id="deleteActivityDescription">
                     Are you sure you want to delete
@@ -268,17 +269,17 @@
 
             </div>
 
-            <div class="activities-dialog-footer">
+            <div class="modal-footer activities-dialog-footer">
 
                 <button type="button"
-                        class="activities-dialog-cancel"
+                        class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                         disabled="@isDeleting"
                         @onclick="CloseDeleteDialog">
                     Cancel
                 </button>
 
                 <button type="button"
-                        class="activities-dialog-confirm"
+                        class="btn btn-danger d-inline-flex align-items-center justify-content-center gap-2"
                         disabled="@isDeleting"
                         @onclick="ConfirmDeleteActivity">
 

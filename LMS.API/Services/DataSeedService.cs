@@ -175,12 +175,36 @@ internal class DataSeedService : IHostedService
         }
 
         var actionTypes = SeedData.ActionTypes();
+        var activities = SeedData.Activities(courses, actionTypes);
+        var documents = SeedData.Documents(courses, teachers[0].Id);
+        var (submissions, feedbacks) =
+            SeedData.SubmissionsWithFeedback(students, teachers, activities);
+
         context.AddRange(actionTypes);
-        context.Activities.AddRange(SeedData.Activities(courses, actionTypes));
-        context.Documents.AddRange(SeedData.Documents(courses, teachers[0].Id));
+        context.Activities.AddRange(activities);
+        context.Documents.AddRange(documents);
         context.Notifications.AddRange(SeedData.Notifications(students));
-        context.Feedbacks.AddRange(SeedData.SubmissionsWithFeedback(students, teachers[0].Id));
+        context.Submissions.AddRange(submissions);
+        context.Feedbacks.AddRange(feedbacks);
         await context.SaveChangesAsync();
+
+        await WriteSeedFilesAsync(
+            documents.Select(d => (d.StoredFile.StorageKey, d.StoredFile.FileName))
+                .Concat(submissions.Select(s => (s.FilePath, s.FileName))));
+    }
+
+    // Same storage root as DocumentService and SubmissionService
+    private async Task WriteSeedFilesAsync(IEnumerable<(string StorageKey, string FileName)> files)
+    {
+        var root = configuration["FileStorage:RootPath"]
+            ?? Path.Combine(AppContext.BaseDirectory, "uploads");
+
+        foreach (var (storageKey, fileName) in files)
+        {
+            var path = Path.Combine(root, storageKey);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllBytesAsync(path, SeedData.FileContent(fileName));
+        }
     }
 
     private async Task CreateUserAsync(

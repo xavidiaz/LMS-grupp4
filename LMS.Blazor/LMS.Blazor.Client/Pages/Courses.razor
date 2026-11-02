@@ -30,7 +30,7 @@
             </p>
         </div>
 
-        <a href="/course/create" class="courses-create-button">
+        <a href="/course/create" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 flex-shrink-0">
             <span aria-hidden="true">+</span>
             Create New Course
         </a>
@@ -38,9 +38,9 @@
     </header>
 
     <!-- COURSES CONTENT -->
-    <section class="courses-card">
+    <section class="card courses-card">
 
-        <div class="courses-card-header">
+        <div class="card-header courses-card-header">
 
             <div>
                 <h2>All Courses</h2>
@@ -87,7 +87,7 @@
                     Create your first course to get started.
                 </p>
 
-                <a href="/course/create" class="courses-create-button">
+                <a href="/course/create" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 flex-shrink-0">
                     Create New Course
                 </a>
 
@@ -97,9 +97,9 @@
         {
             <div class="table-responsive courses-table-wrapper">
 
-                <table class="courses-table">
+                <table class="table table-hover align-middle mb-0 courses-table">
 
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>Course</th>
                             <th>Code</th>
@@ -164,18 +164,18 @@
                                     <div class="courses-actions">
 
                                         <!-- EDIT -->
-                                        <a class="courses-edit-button" href="@($"/course/edit/{c.Id}")">
+                                        <a class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2" href="@($"/course/edit/{c.Id}")">
                                             Edit
                                         </a>
 
                                         <!-- VIEW MODULES -->
-                                        <a class="courses-view-modules-button"
+                                        <a class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                                            href="@($"/courses/{c.Id}/modules")">
                                             View Modules
                                         </a>
 
                                         <!-- DELETE -->
-                                        <button type="button" class="courses-delete-button"
+                                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-2"
                                                 disabled="@deletingIds.Contains(c.Id)" @onclick="() => DeleteCourseAsync(c.Id)">
 
                                             @(deletingIds.Contains(c.Id)

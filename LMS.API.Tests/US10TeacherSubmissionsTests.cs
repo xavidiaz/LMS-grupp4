@@ -89,7 +89,7 @@ public class US10TeacherSubmissionsTests(ApiFactory factory) : ApiTestBase(facto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact(Skip = "See #219: returns 500 today")]
+    [Fact]
     public async Task Teacher_in_another_course_downloads_returns_403()
     {
         var id = await CreateSubmissionAsync();

@@ -206,4 +206,16 @@ public class US16SecurityTests(ApiFactory factory) : ApiTestBase(factory)
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Theory]
+    [InlineData("/api/Module?PageNumber=1&PageSize=100")]
+    [InlineData("/api/Activity?PageNumber=1&PageSize=100")]
+    public async Task Student_lists_everything_returns_403(string url)
+    {
+        var student = await LoginAsync(Student);
+
+        var response = await student.GetAsync(url);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }

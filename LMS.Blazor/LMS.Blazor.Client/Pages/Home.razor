@@ -44,7 +44,7 @@
 
         @if (dashboard.UpcomingActivities.FirstOrDefault() is { } nextActivity)
         {
-            <section class="next-activity-card">
+            <section class="card next-activity-card">
 
                 <div class="next-activity-date">
                     <span class="next-activity-label">Next activity</span>
@@ -118,9 +118,9 @@
 
         <div class="dashboard-grid">
 
-            <section class="dashboard-card">
+            <section class="card dashboard-card">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
                     <div class="panel-title">
                         <span class="panel-icon">☑</span>
                         <h2>Upcoming assignments</h2>
@@ -161,7 +161,7 @@
                                     </p>
                                 </div>
 
-                                <span class="status-label">
+                                <span class="badge status-label">
                                     @assignment.Status
                                 </span>
 
@@ -173,9 +173,9 @@
 
             </section>
 
-            <section class="dashboard-card">
+            <section class="card dashboard-card">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
                     <div class="panel-title">
                         <span class="panel-icon">▤</span>
                         <h2>Recent documents</h2>
@@ -231,9 +231,9 @@
 
         <div class="dashboard-grid">
 
-            <section class="dashboard-card">
+            <section class="card dashboard-card">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
                     <div class="panel-title">
                         <span class="panel-icon">❝</span>
                         <h2>Recent feedback</h2>
@@ -269,7 +269,19 @@
                             <figcaption class="feedback-footer">
 
                                 <div>
-                                    <p>Submission #@feedback.SubmissionId</p>
+                                    @if (feedback.ActivityId is int activityId)
+                                    {
+                                        <p>
+                                            <a class="feedback-link"
+                                               href="@($"/assignments?activityId={activityId}")">
+                                                @(feedback.AssignmentTitle ?? "View assignment")
+                                            </a>
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <p>Submission #@feedback.SubmissionId</p>
+                                    }
 
                                     <small>
                                         @(feedback.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm"))
@@ -289,9 +301,9 @@
 
             </section>
 
-            <section class="dashboard-card">
+            <section class="card dashboard-card">
 
-                <div class="dashboard-card-header">
+                <div class="card-header dashboard-card-header">
                     <div class="panel-title">
                         <span class="panel-icon">♢</span>
                         <h2>Recent notifications</h2>
@@ -332,7 +344,7 @@
                                     </p>
                                 </div>
 
-                                <span class="notification-status @(notification.IsRead ? "read" : "new")">
+                                <span class="badge notification-status @(notification.IsRead ? "read" : "new")">
                                     @(notification.IsRead ? "Read" : "New")
                                 </span>
 

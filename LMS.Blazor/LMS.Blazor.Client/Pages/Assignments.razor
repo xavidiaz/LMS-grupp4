@@ -36,10 +36,10 @@
     {
         @foreach (var assignment in assignments)
         {
-            <div class="assignment-card">
+            <div class="card assignment-card">
 
                 <div class="assignment-content">
-                    <span class="assignment-status @GetStatusClass(assignment)">
+                    <span class="badge assignment-status @GetStatusClass(assignment)">
                         @GetStatusText(assignment)
                     </span>
 
@@ -50,7 +50,7 @@
                     </p>
                 </div>
 
-                <button type="button" class="assignment-button secondary" @onclick="() => ViewDetails(assignment)">
+                <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2" @onclick="() => ViewDetails(assignment)">
                     View details
                 </button>
 
@@ -60,15 +60,15 @@
 
     @if (showDetailsModal && selectedAssignment is not null)
     {
-        <div class="assignment-modal-backdrop" @onclick="CloseDetails">
+        <div class="modal d-flex align-items-center justify-content-center assignment-modal-backdrop" @onclick="CloseDetails">
 
-            <div class="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title"
+            <div class="modal-content assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title"
                  @onclick:stopPropagation="true">
 
-                <div class="assignment-modal-header">
+                <div class="modal-header assignment-modal-header">
 
                     <div>
-                        <span class="assignment-status @GetStatusClass(selectedAssignment)">
+                        <span class="badge assignment-status @GetStatusClass(selectedAssignment)">
                             @GetStatusText(selectedAssignment)
                         </span>
 
@@ -84,7 +84,7 @@
 
                 </div>
 
-                <div class="assignment-modal-body">
+                <div class="modal-body">
 
                     <section class="assignment-modal-section">
                         <h3>Description</h3>
@@ -156,7 +156,7 @@
                         <div class="assignment-upload-heading">
                             <h3>Submit assignment</h3>
 
-                            <span class="assignment-status @GetStatusClass(selectedAssignment)">
+                            <span class="badge assignment-status @GetStatusClass(selectedAssignment)">
                                 @GetStatusText(selectedAssignment)
                             </span>
                         </div>
@@ -179,7 +179,7 @@
                                     <p>
                                         @submission.FileName
                                         - @submission.SubmittedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
-                                        <span class="assignment-status @(submission.Status == "Late" ? "overdue" : "awaiting")">
+                                        <span class="badge assignment-status @(submission.Status == "Late" ? "overdue" : "awaiting")">
                                             @submission.Status
                                         </span>
                                     </p>
@@ -229,19 +229,19 @@
 
                         @if (!string.IsNullOrWhiteSpace(uploadError))
                         {
-                            <div class="assignment-upload-error" role="alert">
+                            <div class="alert alert-danger assignment-upload-error" role="alert">
                                 @uploadError
                             </div>
                         }
 
                         @if (!string.IsNullOrWhiteSpace(uploadSuccess))
                         {
-                            <div class="assignment-upload-success" role="status">
+                            <div class="alert alert-success assignment-upload-success" role="status">
                                 @uploadSuccess
                             </div>
                         }
 
-                        <button type="button" class="assignment-submit-button"
+                        <button type="button" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 w-100 mt-3"
                                 disabled="@(selectedFile is null || isUploading)" @onclick="SubmitAssignment">
 
                             @if (isUploading)
@@ -261,9 +261,9 @@
 
                 </div>
 
-                <div class="assignment-modal-footer">
+                <div class="modal-footer assignment-modal-footer">
 
-                    <button type="button" class="assignment-button secondary" disabled="@isUploading"
+                    <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2" disabled="@isUploading"
                             @onclick="CloseDetails">
                         Close
                     </button>
@@ -299,9 +299,20 @@
 
     private bool hasAssignments => assignments.Count > 0;
 
+    // Set by links such as the dashboard's recent feedback
+    [SupplyParameterFromQuery]
+    public int? ActivityId { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAssignments();
+
+        // Only the student's own assignments are in the list, so other ids are ignored
+        var linked = assignments.FirstOrDefault(a => a.Id == ActivityId);
+        if (linked is not null)
+        {
+            await ViewDetails(linked);
+        }
     }
 
     private async Task LoadAssignments()
@@ -333,7 +344,8 @@
         {
             AssignmentStatus.Unsubmitted => "To do",
             AssignmentStatus.Submitted => "Submitted",
-            AssignmentStatus.Late => "Overdue",
+            AssignmentStatus.Late => "late",
+            AssignmentStatus.Overdue => "overdue",
             _ => "Unknown"
         };
     }
@@ -344,7 +356,8 @@
         {
             AssignmentStatus.Unsubmitted => "todo",
             AssignmentStatus.Submitted => "awaiting",
-            AssignmentStatus.Late => "overdue",
+            AssignmentStatus.Late => "late",
+            AssignmentStatus.Overdue => "overdue",
             _ => string.Empty
         };
     }

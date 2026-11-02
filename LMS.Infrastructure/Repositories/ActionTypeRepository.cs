@@ -31,7 +31,16 @@ namespace LMS.Infrastructure.Repositories
         }
         public async Task<ActionType?> GetByActivityIdAsync(int activityId, bool trackChanges = false)
         {
-            var activity = await _context.Activities.FindAsync(activityId);
+            var query = _context.Activities.Include(a => a.ActionType).AsQueryable();
+    
+            if (!trackChanges)
+            {
+                query = query.AsNoTracking();
+            }
+
+            var activity = await query
+                .FirstOrDefaultAsync(a => a.Id == activityId);
+
             return activity?.ActionType;
         }
     }

@@ -6,6 +6,7 @@ public sealed record UploadDocumentDto
  string ContentType,
  long Size,
  int? CourseId,
- int? ModuleId
+ int? ModuleId,
+ int? ActivityId = null
  );
 

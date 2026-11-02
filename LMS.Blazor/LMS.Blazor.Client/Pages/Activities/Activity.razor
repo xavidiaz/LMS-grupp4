@@ -1,0 +1,107 @@
+@page "/activities/{Id:int}"
+
+@using LMS.Blazor.Client.Components
+@using LMS.Shared.DTOs.Activity
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Student,Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Activity</PageTitle>
+
+<h3 class="mb-4">Activity</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (activity is null)
+{
+    <div class="alert alert-danger" role="alert">
+        @(errorMessage ?? "The activity could not be loaded.")
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td>Title</td>
+                            <td>@activity.Title</td>
+                        </tr>
+                        <tr>
+                            <td>Type</td>
+                            <td>@activity.ActionTypeName</td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td>@activity.Description</td>
+                        </tr>
+                        <tr>
+                            <td>Start Time</td>
+                            <td>@activity.StartDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                        <tr>
+                            <td>End Time</td>
+                            <td>@activity.EndDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <a class="btn btn-sm btn-outline-secondary" href="@($"/modules/{activity.ModuleId}")">
+                Back to Module
+            </a>
+        </div>
+    </div>
+    <div class="card my-3">
+        <div class="card-body">
+            <CourseDocuments Id="Id" Type="activity"></CourseDocuments>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ActivityDto? activity;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        activity = null;
+
+        try
+        {
+            activity = await ApiProxyClient.GetAsync<ActivityDto>($"Activity/{Id}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

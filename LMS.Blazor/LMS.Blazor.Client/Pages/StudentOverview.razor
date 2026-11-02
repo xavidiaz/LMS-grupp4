@@ -1,0 +1,202 @@
+@page "/students/{Id}"
+
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.UserDtos
+@using LMS.Shared.Enum
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(Roles = "Teacher")]
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Student</PageTitle>
+
+<h3 class="mb-4">Student</h3>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (overview is null)
+{
+    <div class="alert alert-danger" role="alert">
+        @(errorMessage ?? "The student could not be loaded.")
+    </div>
+}
+else
+{
+    var student = overview.Student;
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table mb-3">
+                    <tbody>
+                        <tr>
+                            <td>Name</td>
+                            <td>@student.FirstName @student.LastName</td>
+                        </tr>
+                        <tr>
+                            <td>Email</td>
+                            <td>@student.Email</td>
+                        </tr>
+                        <tr>
+                            <td>Course</td>
+                            <td>@(student.CourseName ?? "Not assigned")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            @if (student.CourseId is int courseId)
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="@($"/course/{courseId}")">
+                    Back to Course
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="card my-3">
+        <div class="card-body">
+            <h4 class="mb-3">Modules</h4>
+
+            @if (!overview.Modules.Any())
+            {
+                <p class="text-muted mb-0">No modules in this course yet.</p>
+            }
+            else
+            {
+                <ul class="list-group">
+                    @foreach (var module in overview.Modules)
+                    {
+                        <li class="list-group-item d-flex flex-wrap justify-content-between gap-2" @key="module.Id">
+                            <div>
+                                <a class="fw-bold" href="@($"/modules/{module.Id}")">@module.Name</a>
+                                @if (module.Id == overview.CurrentModuleId)
+                                {
+                                    <span class="badge text-bg-success ms-2">Current</span>
+                                }
+                            </div>
+                            <span class="text-muted">
+                                @module.StartDate.ToString("yyyy-MM-dd")
+                                –
+                                @module.EndDate.ToString("yyyy-MM-dd")
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h4 class="mb-3">Assignments</h4>
+
+            @if (!overview.Assignments.Any())
+            {
+                <p class="text-muted mb-0">No assignments yet.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Assignment</th>
+                                <th>Deadline</th>
+                                <th>Status</th>
+                                <th>Feedback</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var assignment in overview.Assignments)
+                            {
+                                <tr @key="assignment.Id">
+                                    <td>
+                                        <a href="@($"/activities/{assignment.Id}")">@assignment.Name</a>
+                                    </td>
+                                    <td>@assignment.Deadline.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>
+                                        <span class="badge @StatusClass(assignment.AssignmentStatus)">
+                                            @StatusText(assignment.AssignmentStatus)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (assignment.HasFeedback)
+                                        {
+                                            <strong>@assignment.Grade</strong>
+                                            <span class="text-muted ms-1">@assignment.Comment</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">–</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private StudentOverviewDto? overview;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        overview = null;
+
+        try
+        {
+            overview = await ApiProxyClient.GetAsync<StudentOverviewDto>(
+                $"students/{Uri.EscapeDataString(Id)}/overview");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                "/Account/Login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static string StatusText(AssignmentStatus status) => status switch
+    {
+        AssignmentStatus.Submitted => "Submitted",
+        AssignmentStatus.Late => "Late",
+        AssignmentStatus.Overdue => "Overdue",
+        _ => "Not submitted"
+    };
+
+    private static string StatusClass(AssignmentStatus status) => status switch
+    {
+        AssignmentStatus.Submitted => "text-bg-success",
+        AssignmentStatus.Late => "text-bg-warning",
+        AssignmentStatus.Overdue => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+}

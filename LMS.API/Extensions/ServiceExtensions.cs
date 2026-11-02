@@ -50,5 +50,7 @@ public static class ServiceExtensions
         services.AddLazy<IDocumentService>();
         services.AddLazy<ISubmissionService>();
         services.AddLazy<IFeedbackService>();
+        services.AddScoped<ICourseAccessService, CourseAccessService>();
+        services.AddLazy<ICourseAccessService>();
     }
 }

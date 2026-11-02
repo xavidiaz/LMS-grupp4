@@ -54,7 +54,7 @@ namespace LMS.Presentation.Controllers
             Summary = "Get action type by Activity",
             Description = "Retrieves the action type for a specific activity.")]
         [ProducesResponseType(
-            typeof(PagedResponse<ActionTypeDto>),
+            typeof(ActionTypeDto),
             StatusCodes.Status200OK)]
         [ProducesResponseType(
             typeof(ProblemDetails),

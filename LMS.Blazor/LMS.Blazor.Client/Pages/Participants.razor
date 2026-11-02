@@ -58,7 +58,7 @@
                     <span>@group.Count</span>
                 </div>
 
-                <ul class="participants-card">
+                <ul class="card participants-card">
 
                     @foreach (var participant in group)
                     {
@@ -76,7 +76,7 @@
 
                                     @if (IsCurrentUser(participant))
                                     {
-                                        <span class="current-user-badge">
+                                        <span class="badge current-user-badge">
                                             You
                                         </span>
                                     }

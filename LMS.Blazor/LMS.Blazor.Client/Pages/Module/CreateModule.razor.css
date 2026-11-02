@@ -8,7 +8,7 @@
 .create-module-page {
     width: 100%;
     padding: 32px 36px 48px;
-    color: #202a25;
+    color: var(--color-text-strong);
 }
 
 /* PAGE HEADER */
@@ -27,12 +27,12 @@
     font-weight: 700;
     letter-spacing: -0.8px;
     line-height: 1.25;
-    color: #202824;
+    color: var(--color-text-strong);
 }
 
 .create-module-header-text p {
     margin: 0;
-    color: #7b8580;
+    color: var(--color-text-subtle);
     font-size: 14px;
     line-height: 1.6;
 }
@@ -41,11 +41,7 @@
 
 .create-module-card {
     width: 100%;
-    background: #ffffff;
-    border: 1px solid #e8ede9;
-    border-radius: 13px;
     overflow: hidden;
-    box-shadow: 0 3px 16px rgba(30, 50, 40, 0.035);
 }
 
 /* CARD HEADER */
@@ -56,12 +52,11 @@
     align-items: center;
     gap: 15px;
     padding: 23px 25px;
-    border-bottom: 1px solid #edf0ed;
 }
 
     .create-module-card-header h2 {
         margin: 0 0 6px;
-        color: #27332c;
+        color: var(--color-text);
         font-size: 17px;
         line-height: 1.3;
         font-weight: 700;
@@ -69,12 +64,12 @@
 
     .create-module-card-header p {
         margin: 0;
-        color: #929b95;
+        color: var(--color-text-faint);
         font-size: 12px;
     }
 
 .create-module-header-icon {
-    color: #87978c;
+    color: var(--color-text-faint);
     font-size: 19px;
 }
 
@@ -87,74 +82,6 @@
     padding: 28px 30px 32px;
 }
 
-.create-module-field {
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-}
-
-    .create-module-field label {
-        color: #334238;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    /* INPUT FIELDS */
-
-    .create-module-field ::deep .create-module-input {
-        display: block;
-        width: 100%;
-        min-height: 44px;
-        padding: 11px 14px;
-        border: 1px solid #dfe6e0;
-        border-radius: 8px;
-        background: #ffffff;
-        color: #334238;
-        font-family: inherit;
-        font-size: 13px;
-        line-height: 1.5;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .create-module-field ::deep .create-module-input:hover {
-            border-color: #b9cbbd;
-        }
-
-        .create-module-field ::deep .create-module-input:focus {
-            outline: none;
-            border-color: #658b70;
-            box-shadow: 0 0 0 3px rgba(101, 139, 112, 0.12);
-        }
-
-        .create-module-field ::deep .create-module-input::placeholder {
-            color: #a1aba4;
-        }
-
-    /* DESCRIPTION */
-
-    .create-module-field ::deep .create-module-textarea {
-        min-height: 110px;
-        resize: vertical;
-    }
-
-    /* COURSE ID FIELD */
-
-    .create-module-field ::deep .create-module-input:disabled,
-    .create-module-field ::deep .create-module-input:read-only {
-        background: #f5f7f5;
-        border-color: #e6ece7;
-        color: #758379;
-        cursor: not-allowed;
-    }
-
-/* DATE FIELDS */
-
-.create-module-date-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 22px;
-}
-
 /* INFORMATION BOX */
 
 .create-module-info {
@@ -162,40 +89,51 @@
     align-items: flex-start;
     gap: 14px;
     padding: 18px 20px;
-    background: #f5f9f5;
-    border: 1px solid #dce9df;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 9px;
 }
 
 .create-module-info-icon {
     flex-shrink: 0;
-    color: #42654f;
+    color: var(--color-primary-light);
     font-size: 19px;
 }
 
 .create-module-info strong {
     display: block;
     margin-bottom: 7px;
-    color: #334238;
+    color: var(--color-text-secondary);
     font-size: 13px;
     font-weight: 700;
 }
 
 .create-module-info p {
     margin: 0;
-    color: #66726b;
+    color: var(--color-text-subtle);
     font-size: 12px;
     line-height: 1.7;
 }
+
+.create-module-periods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 40px;
+    margin-top: 12px;
+}
+
+    .create-module-periods strong {
+        margin-bottom: 4px;
+    }
 
 /* VALIDATION */
 
 .create-module-validation ::deep .validation-summary-errors {
     padding: 14px 16px;
-    background: #fff2f1;
-    border: 1px solid #f3d6d3;
+    background: var(--color-danger-soft);
+    border: 1px solid var(--color-danger-border);
     border-radius: 8px;
-    color: #a13d38;
+    color: var(--color-danger-muted);
     font-size: 13px;
 }
 
@@ -208,15 +146,6 @@
     display: none;
 }
 
-.create-module-field ::deep .validation-message {
-    color: #b7524b;
-    font-size: 12px;
-}
-
-.create-module-field ::deep .create-module-input.invalid {
-    border-color: #d3817a;
-}
-
 /* ERROR MESSAGE */
 
 .create-module-error {
@@ -224,13 +153,6 @@
     align-items: flex-start;
     gap: 10px;
     margin: 20px 24px;
-    padding: 14px 16px;
-    background: #fff2f1;
-    border: 1px solid #f3d6d3;
-    border-radius: 8px;
-    color: #a13d38;
-    font-size: 13px;
-    line-height: 1.6;
 }
 
 /* LOADING STATE */
@@ -247,14 +169,14 @@
 }
 
     .create-module-state strong {
-        color: #37443b;
+        color: var(--color-text-secondary);
         font-size: 14px;
         font-weight: 700;
     }
 
     .create-module-state p {
         margin: 0;
-        color: #909b93;
+        color: var(--color-text-faint);
         font-size: 13px;
         line-height: 1.6;
     }
@@ -263,7 +185,7 @@
     width: 30px;
     height: 30px;
     margin-bottom: 10px;
-    color: #416a50;
+    color: var(--color-primary-light);
 }
 
 /* FORM FOOTER */
@@ -275,68 +197,9 @@
     flex-wrap: wrap;
     gap: 12px;
     padding: 20px 30px;
-    background: #ffffff;
-    border-top: 1px solid #edf0ed;
+    background: var(--color-white);
+    border-top: 1px solid var(--color-border-light);
 }
-
-/* BUTTONS */
-
-.create-module-save-button,
-.create-module-cancel-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    min-height: 40px;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-/* CREATE BUTTON */
-
-.create-module-save-button {
-    background: #233e32;
-    border: 1px solid #233e32;
-    color: #ffffff;
-}
-
-    .create-module-save-button:hover:not(:disabled) {
-        background: #315645;
-        border-color: #315645;
-        color: #ffffff;
-    }
-
-    .create-module-save-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-/* CANCEL BUTTON */
-
-.create-module-cancel-button {
-    background: #ffffff;
-    border: 1px solid #dfe7e0;
-    color: #58685d;
-}
-
-    .create-module-cancel-button:hover {
-        background: #edf3ee;
-        color: #304a36;
-    }
-
-    /* ACCESSIBILITY */
-
-    .create-module-save-button:focus-visible,
-    .create-module-cancel-button:focus-visible {
-        outline: 3px solid #9bc9b0;
-        outline-offset: 3px;
-    }
 
 /* RESPONSIVE DESIGN */
 
@@ -362,11 +225,6 @@
         padding: 22px 18px;
     }
 
-    .create-module-date-grid {
-        grid-template-columns: 1fr;
-        gap: 22px;
-    }
-
     .create-module-footer {
         padding: 18px;
     }
@@ -381,10 +239,5 @@
     .create-module-footer {
         flex-direction: column-reverse;
         align-items: stretch;
-    }
-
-    .create-module-save-button,
-    .create-module-cancel-button {
-        width: 100%;
     }
 }

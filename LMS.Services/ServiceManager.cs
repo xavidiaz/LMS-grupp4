@@ -14,6 +14,7 @@ public class ServiceManager(
         Lazy<IFeedbackService> feedbackService,
         Lazy<IActivityService> activityService,
         Lazy<IActionTypeService> actionTypeService,
+        Lazy<ICourseAccessService> courseAccessService,
 
         IDashboardService dashboardService) : IServiceManager
 {
@@ -28,7 +29,7 @@ public class ServiceManager(
     private readonly Lazy<IActionTypeService> _actionTypeService = actionTypeService;
     private readonly Lazy<IActivityService> _activityService = activityService; 
     private readonly IDashboardService _dashboardService = dashboardService;
-
+    private readonly Lazy<ICourseAccessService> _courseAccessService = courseAccessService;
     public IAuthService AuthService => _authService.Value;
     public IUserService UserService => _userService.Value;
     public INotificationService NotificationService => _notificationService.Value;
@@ -39,5 +40,6 @@ public class ServiceManager(
     public IDashboardService DashboardService => _dashboardService;
     public IFeedbackService FeedbackService => _feedbackService.Value;
     public IActivityService ActivityService => _activityService.Value;
-   public IActionTypeService ActionTypeService => _actionTypeService.Value; 
+   public IActionTypeService ActionTypeService => _actionTypeService.Value;
+    public ICourseAccessService CourseAccessService => _courseAccessService.Value;
 }

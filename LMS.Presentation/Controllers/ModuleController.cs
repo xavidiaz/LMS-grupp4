@@ -27,6 +27,7 @@ namespace LMS.Presentation.Controllers
 
         // GET: api/Module
         [HttpGet]
+        [Authorize(Roles = "Teacher")]
         [SwaggerOperation(
             Summary = "Get all modules",
             Description = "Retrieves a paginated list of modules.")]
@@ -58,8 +59,14 @@ namespace LMS.Presentation.Controllers
             StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetById(int id)
         {
-            if (!await CanAccessModuleAsync(id))
-                return Forbid();
+            if (!User.IsInRole("Teacher"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId) ||
+                    !await _serviceManager.CourseAccessService.CanAccessModuleAsync(userId, id))
+                    return Forbid();
+            }
             var module = await _serviceManager.ModuleService.GetByIdAsync(id);
 
             return Ok(module);
@@ -80,6 +87,14 @@ namespace LMS.Presentation.Controllers
             StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetByIdWithCourse(int id)
         {
+            if (!User.IsInRole("Teacher"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId) ||
+                    !await _serviceManager.CourseAccessService.CanAccessModuleAsync(userId, id))
+                    return Forbid();
+            }
             var module = await _serviceManager.ModuleService.GetByIdWithCourseAsync(id);
 
             return Ok(module);
@@ -100,6 +115,14 @@ namespace LMS.Presentation.Controllers
             StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetByCourseId(int courseId)
         {
+            if (!User.IsInRole("Teacher"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId) ||
+                    !await _serviceManager.CourseAccessService.CanAccessCourseAsync(userId, courseId))
+                    return Forbid();
+            }
             var modules = await _serviceManager.ModuleService.GetByCourseIdAsync(courseId);
 
             return Ok(modules);
@@ -194,23 +217,6 @@ namespace LMS.Presentation.Controllers
             await _serviceManager.ModuleService.DeleteModuleAsync(id);
 
             return NoContent();
-        }
-
-        // Teachers can access all courses, students only their own
-        private async Task<bool> CanAccessModuleAsync(int? moduleId)
-        {
-            if (User.IsInRole("Teacher"))
-                return true;
-
-            if (moduleId is null)
-                return false;
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrWhiteSpace(userId))
-                return false;
-            var user = await _serviceManager.UserService.GetUserAsync(userId);
-            var module = await _serviceManager.ModuleService.GetByIdAsync((int)moduleId);
-            return module!.CourseId == user.CourseId;
         }
     }
 }

@@ -12,6 +12,7 @@
 
 @inject IApiProxyClient ApiProxyClient
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 <PageTitle>Add User</PageTitle>
 
@@ -26,10 +27,10 @@
     </header>
 
     <!-- MAIN CARD -->
-    <section class="user-create-card">
+    <section class="card user-create-card">
 
         <!-- CARD HEADER -->
-        <div class="user-create-card-header">
+        <div class="card-header user-create-card-header">
             <div>
                 <h2>User Information</h2>
                 <p>Enter the details for the new user below.</p>
@@ -39,6 +40,71 @@
                   aria-hidden="true"></span>
         </div>
 
+        @if (createdUser is not null && setupLink is not null)
+        {
+            <!-- USER CREATED: SETUP LINK FOR THE NEW USER -->
+            <div class="user-create-form">
+
+                <div class="alert alert-success mb-0" role="status">
+                    @createdUser.FirstName @createdUser.LastName
+                    (@createdUser.Email) has been created.
+                </div>
+
+                <div class="user-create-info">
+
+                    <span class="user-create-info-icon bi bi-link-45deg"
+                          aria-hidden="true"></span>
+
+                    <div class="flex-grow-1">
+                        <strong>Password setup link</strong>
+
+                        <p>
+                            Send this link to the user. They open it to
+                            set their own password and then log in.
+                        </p>
+
+                        <div class="input-group mt-2">
+                            <input type="text"
+                                   class="form-control"
+                                   value="@setupLink"
+                                   aria-label="Password setup link"
+                                   readonly />
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    @onclick="CopySetupLink">
+                                @(linkCopied ? "Copied" : "Copy link")
+                            </button>
+                        </div>
+
+                        @if (copyFailed)
+                        {
+                            <p class="text-danger mt-2">
+                                Copy failed. Select the link and copy it manually.
+                            </p>
+                        }
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="user-create-footer">
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="AddAnotherUser">
+                    Add Another User
+                </button>
+
+                <a class="btn btn-primary" href="/users">
+                    Back to User Management
+                </a>
+
+            </div>
+        }
+        else
+        {
         <!-- LOADING COURSES -->
         @if (isLoadingCourses)
         {
@@ -53,7 +119,7 @@
         <!-- ERROR MESSAGE -->
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
-            <div class="user-create-error" role="alert">
+            <div class="alert alert-danger user-create-error" role="alert">
                 <span class="bi bi-exclamation-circle"
                       aria-hidden="true"></span>
 
@@ -75,13 +141,13 @@
                 </div>
 
                 <!-- FIRST NAME AND LAST NAME -->
-                <div class="user-create-name-grid">
+                <div class="row g-4">
 
-                    <div class="user-create-field">
-                        <label for="firstName">First Name</label>
+                    <div class="col-md-6">
+                        <label class="form-label" for="firstName">First Name</label>
 
                         <InputText id="firstName"
-                                   class="user-create-input"
+                                   class="form-control"
                                    @bind-Value="model.FirstName"
                                    placeholder="Enter first name" />
 
@@ -89,11 +155,11 @@
                             For="@(() => model.FirstName)" />
                     </div>
 
-                    <div class="user-create-field">
-                        <label for="lastName">Last Name</label>
+                    <div class="col-md-6">
+                        <label class="form-label" for="lastName">Last Name</label>
 
                         <InputText id="lastName"
-                                   class="user-create-input"
+                                   class="form-control"
                                    @bind-Value="model.LastName"
                                    placeholder="Enter last name" />
 
@@ -104,11 +170,11 @@
                 </div>
 
                 <!-- EMAIL -->
-                <div class="user-create-field">
-                    <label for="email">Email</label>
+                <div>
+                    <label class="form-label" for="email">Email</label>
 
                     <InputText id="email"
-                               class="user-create-input"
+                               class="form-control"
                                type="email"
                                @bind-Value="model.Email"
                                placeholder="Enter email address" />
@@ -118,11 +184,11 @@
                 </div>
 
                 <!-- ROLE -->
-                <div class="user-create-field">
-                    <label for="userRole">Role</label>
+                <div>
+                    <label class="form-label" for="userRole">Role</label>
 
                     <InputSelect id="userRole"
-                                 class="user-create-input"
+                                 class="form-select"
                                  @bind-Value="model.Role">
 
                         <option value="">-- Select role --</option>
@@ -136,11 +202,11 @@
                 </div>
 
                 <!-- COURSE -->
-                <div class="user-create-field">
-                    <label for="userCourse">Course (Optional)</label>
+                <div>
+                    <label class="form-label" for="userCourse">Course (Optional)</label>
 
                     <InputSelect id="userCourse"
-                                 class="user-create-input"
+                                 class="form-select"
                                  @bind-Value="model.CourseId"
                                  disabled="@isLoadingCourses">
 
@@ -155,7 +221,7 @@
 
                     </InputSelect>
 
-                    <p class="user-create-help-text">
+                    <p class="form-text">
                         Select a course to assign to the user,
                         or leave it unassigned.
                     </p>
@@ -184,14 +250,14 @@
             <div class="user-create-footer">
 
                 <button type="button"
-                        class="user-create-cancel-button"
+                        class="btn btn-outline-secondary"
                         @onclick="Cancel"
                         disabled="@isSaving">
                     Cancel
                 </button>
 
                 <button type="submit"
-                        class="user-create-save-button"
+                        class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2"
                         disabled="@isSaving">
 
                     @if (isSaving)
@@ -215,6 +281,7 @@
             </div>
 
         </EditForm>
+        }
 
     </section>
 
@@ -229,6 +296,12 @@
     private bool isLoadingCourses = true;
 
     private string? errorMessage;
+
+    // Set after a user is created; the teacher passes the link on to the user
+    private UserDto? createdUser;
+    private string? setupLink;
+    private bool linkCopied;
+    private bool copyFailed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -295,7 +368,8 @@
                 $"?userId={Uri.EscapeDataString(result.User.Id)}" +
                 $"&token={Uri.EscapeDataString(result.PasswordSetupToken)}";
 
-            NavigationManager.NavigateTo(setupUrl);
+            createdUser = result.User;
+            setupLink = NavigationManager.ToAbsoluteUri(setupUrl).ToString();
         }
         catch (UnauthorizedAccessException)
         {
@@ -320,5 +394,29 @@
     private void Cancel()
     {
         NavigationManager.NavigateTo("/users");
+    }
+
+    private async Task CopySetupLink()
+    {
+        copyFailed = false;
+
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", setupLink);
+            linkCopied = true;
+        }
+        catch (JSException)
+        {
+            copyFailed = true;
+        }
+    }
+
+    private void AddAnotherUser()
+    {
+        model = new();
+        createdUser = null;
+        setupLink = null;
+        linkCopied = false;
+        copyFailed = false;
     }
 }

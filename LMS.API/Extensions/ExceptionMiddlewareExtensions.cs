@@ -32,7 +32,10 @@ public static class ExceptionMiddlewareExtensions
                         NotFoundException ex => (StatusCodes.Status404NotFound, ex.Title),
                         TokenValidationException ex => (StatusCodes.Status401Unauthorized, "Unauthorized"),
                         DeleteCourseException ex => (StatusCodes.Status409Conflict, ex.Title),
+                        DeleteActivityException ex => (StatusCodes.Status409Conflict, ex.Title),
                         InvalidSubmissionStatusException ex => (StatusCodes.Status400BadRequest, ex.Message),
+                        UnauthorizedAccessException ex => (StatusCodes.Status403Forbidden, "Forbidden"),
+                        ArgumentException ex => (StatusCodes.Status400BadRequest, ex.Message),
                         _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
                     };
 

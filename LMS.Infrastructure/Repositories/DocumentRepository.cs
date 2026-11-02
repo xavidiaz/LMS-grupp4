@@ -17,7 +17,8 @@ public class DocumentRepository(ApplicationDbContext context) : RepositoryBase<D
     public async Task<IEnumerable<Document>> GetByCourseIdAsync(int courseId) =>
         await FindByCondition(d =>
                 d.CourseId == courseId ||
-                (d.Module != null && d.Module.CourseId == courseId))
+                (d.Module != null && d.Module.CourseId == courseId) ||
+                (d.Activity != null && d.Activity.Module != null && d.Activity.Module.CourseId == courseId))
         .Include(d => d.StoredFile)
         .OrderByDescending(d => d.UploadAt)
         .ToListAsync();
@@ -28,11 +29,20 @@ public class DocumentRepository(ApplicationDbContext context) : RepositoryBase<D
         .OrderByDescending(d => d.UploadAt)
         .ToListAsync();
 
+    public async Task<IEnumerable<Document>> GetByActivityIdAsync(int activityId) =>
+        await FindByCondition(d => d.ActivityId == activityId)
+        .Include(d => d.StoredFile)
+        .OrderByDescending(d => d.UploadAt)
+        .ToListAsync();
+
     public void DeleteStoredFile(StoredFile file) => context.StoredFiles.Remove(file);
 
     public async Task<bool> IsInCourseAsync(int courseId, int moduleId)
     {
-        return await context.Documents.AnyAsync(d => d.Id == moduleId && (d.CourseId == courseId || d.Module.CourseId == courseId));
+        return await context.Documents.AnyAsync(d => d.Id == moduleId &&
+            (d.CourseId == courseId ||
+             d.Module.CourseId == courseId ||
+             d.Activity!.Module!.CourseId == courseId));
     }
 }
 

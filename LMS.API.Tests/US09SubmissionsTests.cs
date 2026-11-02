@@ -1,3 +1,4 @@
+using LMS.Shared.Enum;
 using System.Net;
 
 namespace LMS.API.Tests;
@@ -40,6 +41,32 @@ public class US09SubmissionsTests(ApiFactory factory) : ApiTestBase(factory)
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("Late", body.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Late_submission_shows_Late_in_my_assignments()
+    {
+        var assignmentId = await GetAssignmentIdAsync(StudentC);
+        var student = await LoginAsync(StudentC);
+        await SubmitAsync(student, assignmentId);
+
+        var body = await ReadJsonAsync(await student.GetAsync("/api/Activity/my-assignments?PageNumber=1&PageSize=50"));
+        var assignment = body.GetProperty("items").EnumerateArray()
+            .First(a => a.GetProperty("id").GetInt32() == assignmentId);
+
+        Assert.Equal((int)AssignmentStatus.Late, assignment.GetProperty("assignmentStatus").GetInt32());
+    }
+
+    [Fact]
+    public async Task Missing_submission_after_deadline_shows_Overdue_in_my_assignments()
+    {
+        var student = await LoginAsync(StudentC);
+
+        var body = await ReadJsonAsync(await student.GetAsync("/api/Activity/my-assignments?PageNumber=1&PageSize=50"));
+
+        Assert.Contains(
+            body.GetProperty("items").EnumerateArray(),
+            a => a.GetProperty("assignmentStatus").GetInt32() == (int)AssignmentStatus.Overdue);
     }
 
     [Fact]

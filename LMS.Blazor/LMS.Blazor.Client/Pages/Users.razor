@@ -27,7 +27,7 @@
         </div>
 
         <a href="/users/create"
-           class="users-add-button">
+           class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 flex-shrink-0">
             <span aria-hidden="true">+</span>
             Add User
         </a>
@@ -35,9 +35,9 @@
     </header>
 
     <!-- MAIN CARD -->
-    <section class="users-card">
+    <section class="card users-card">
 
-        <div class="users-card-header">
+        <div class="card-header users-card-header">
             <div>
                 <h2>All Users</h2>
 
@@ -64,7 +64,7 @@
                    @bind="searchTerm" />
 
             <button type="button"
-                    class="users-add-button"
+                    class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 flex-shrink-0"
                     @onclick="SearchUsers">
                 Search
             </button>
@@ -85,7 +85,7 @@
         }
         else if (!string.IsNullOrWhiteSpace(errorMessage))
         {
-            <div class="users-error-message"
+            <div class="alert alert-danger users-error-message"
                  role="alert">
                 @errorMessage
             </div>
@@ -109,11 +109,11 @@
         }
         else
         {
-            <div class="table-responsive users-table-wrapper">
+            <div class="table-responsive table-responsive users-table-wrapper">
 
-                <table class="users-table">
+                <table class="table table-hover align-middle mb-0 users-table">
 
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>First Name</th>
                             <th>Last Name</th>
@@ -132,15 +132,17 @@
                             <tr>
 
                                 <td>
-                                    <span class="users-first-name">
+                                    <a class="users-first-name"
+                                       href="@DetailsUrl(user)">
                                         @user.FirstName
-                                    </span>
+                                    </a>
                                 </td>
 
                                 <td>
-                                    <span class="users-last-name">
+                                    <a class="users-last-name"
+                                       href="@DetailsUrl(user)">
                                         @user.LastName
-                                    </span>
+                                    </a>
                                 </td>
 
                                 <td class="users-email">
@@ -156,7 +158,7 @@
                                     }
                                     else
                                     {
-                                        <span class="users-course-badge">
+                                        <span class="badge users-course-badge">
                                             @user.CourseName
                                         </span>
                                     }
@@ -167,13 +169,13 @@
 
                                         <!-- EDIT -->
                                         <a href="@($"/users/edit/{user.Id}")"
-                                           class="users-edit-button">
+                                           class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2">
                                             Edit
                                         </a>
 
                                         <!-- DELETE -->
                                         <a href="@($"/users/delete/{user.Id}")"
-                                           class="users-delete-button">
+                                           class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-2">
                                             Delete
                                         </a>
 
@@ -196,7 +198,7 @@
                 <div class="users-pagination">
 
                     <button type="button"
-                            class="users-pagination-button"
+                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                             disabled="@(!pagedResponse.HasPreviousPage)"
                             @onclick="PreviousPage">
                         ← Previous
@@ -208,7 +210,7 @@
                     </span>
 
                     <button type="button"
-                            class="users-pagination-button"
+                            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2"
                             disabled="@(!pagedResponse.HasNextPage)"
                             @onclick="NextPage">
                         Next →
@@ -236,6 +238,12 @@
     private string searchTerm = string.Empty;
 
     private const int PageSize = 10;
+
+    // Students have an overview page; teachers open the edit form
+    private static string DetailsUrl(UserDto user) =>
+        user.Role == "Student"
+            ? $"/students/{user.Id}"
+            : $"/users/edit/{user.Id}";
 
     protected override async Task OnInitializedAsync()
     {
